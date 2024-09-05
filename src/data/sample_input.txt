@@ -1,0 +1,23 @@
+9
+mcs1
+mcs2
+mcs3
+mcs4
+mcs5
+mcs6
+mcs7
+mcs8
+mcs9
+3
+7
+mcs1 4 mcs2 mcs4 mcs5 mcs9
+mcs2 2 mcs1 mcs3
+mcs4 5 mcs1 mcs2 mcs6 mcs7 mcs8
+mcs5 2 mcs1 mcs4
+mcs6 3 mcs7 mcs8 mcs9
+mcs8 3 mcs7 mcs4 mcs9
+mcs9 3 mcs1 mcs3 mcs8
+3
+mcs3 0
+mcs2 1
+mcs1 1
