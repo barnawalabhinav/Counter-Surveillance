@@ -3,8 +3,12 @@
 #include <vector>
 #include <random>
 #include <algorithm>
+#include <omp.h>
 
 #include "helper.hpp"
+
+// Custom reduction declaration for OpenMP
+#pragma omp declare reduction(+ : Stats : omp_out += omp_in) initializer(omp_priv = Stats())
 
 /*
 Simulate the decentralized attendance system in a class
@@ -20,18 +24,16 @@ r: Probability that a student is present in the class
 seed: Random Number Generator Seed
 b: b for voting for absent student
 */
-inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 5)
+inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 5, bool printVoteCount = false)
 {
     std::bernoulli_distribution vote_present_dist(p);
     std::bernoulli_distribution vote_absent_dist(q);
     std::bernoulli_distribution is_present_dist(r);
 
-    std::mt19937 generator(seed);
-    if (seed == -1)
-    {
-        std::random_device rd;
-        generator = std::mt19937(rd());
-    }
+    std::random_device rd;
+    std::mt19937 generator(rd());
+    if (seed != -1)
+        generator = std::mt19937(seed);
 
     std::vector<bool> present_status(n);
     std::vector<int> voters[n];
@@ -102,21 +104,51 @@ inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int
             marked_present[i] = false;
     }
 
-    return Stats().calc_stats(present_status, marked_present);
+    Stats stats;
+    stats.calc_stats(present_status, marked_present);
+
+    if (printVoteCount)
+    {
+        double mean_k_cnt = 0;
+        double std_k_cnt = 0;
+        for (int i = 0; i < n; i++)
+        {
+            mean_k_cnt += voters[i].size();
+            std_k_cnt += voters[i].size() * voters[i].size();
+        }
+        mean_k_cnt /= n;
+        std_k_cnt /= n;
+        std_k_cnt -= mean_k_cnt * mean_k_cnt;
+        std_k_cnt = sqrt(std_k_cnt);
+
+        std::cout << std::fixed << std::setprecision(3) << "Number of Voters : " << mean_k_cnt << "\t\u00B1\t" << std_k_cnt << std::endl;
+    }
+    return stats;
 }
 
-inline std::pair<Stats, Stats> experiment(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 5)
+inline std::pair<Stats, Stats> experiment(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 5, int threads = 1)
 {
-    Stats mean;
-    Stats std;
+    Stats res = simulate(n, m, k, a, p, q, r, seed, b, true);
+
+    Stats mean, std;
+    int num_sim = 0;
+#pragma omp parallel for reduction(+ : mean, std, num_sim) num_threads(threads)
     for (int i = 0; i < 1000; i++)
     {
-        Stats result = simulate(n, m, k, a, p, q, r, seed, b);
-        mean += result;
-        std += result * result;
+        for (int j = 0; j < 100; j++)
+        {
+            Stats result = simulate(n, m, k, a, p, q, r, seed, b);
+            if (result.is_valid())
+            {
+                mean += result;
+                std += result * result;
+                num_sim++;
+                break;
+            }
+        }
     }
-    mean /= 1000;
-    std /= 1000;
+    mean /= num_sim;
+    std /= num_sim;
     std -= mean * mean;
     std = std.sqrt();
     return {mean, std};
@@ -267,8 +299,8 @@ int main(int argc, char *argv[])
     std::cout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
     std::cout << "---------------------------------------------------------------------------- " << std::endl;
 
-    Stats result = simulate(n, m, k, a, p, q, r);
     std::cout << "############################ SIMULATION RESULTS ############################" << std::endl;
+    std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, b, num_threads);
     std::cout << result << std::endl;
     std::cout << "############################################################################ " << std::endl;
 
