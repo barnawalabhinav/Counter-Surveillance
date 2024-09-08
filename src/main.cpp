@@ -4,65 +4,7 @@
 #include <random>
 #include <algorithm>
 
-void display_help(const std::string &program_name)
-{
-    std::cout << "Usage: " << program_name << " [options]\n"
-              << "Options:\n"
-              << "  --help          Display this help message\n"
-              << "  --threads <int> Specify the Number of Parallel Threads to use\n"
-              << "  --seed <int>    Specify the random number generator seed\n"
-              << "  --sim <int>     Specify the Number of Simulations\n"
-              << "  --n <int>       Specify the Number of Students in the Class\n"
-              << "  --m <int>       Specify the Number of Students to pick for rollcall\n"
-              << "  --k <int>       Specify the Minimum Number of Votes required to be present\n"
-              << "  --a <int>       Specify the Maximum Number of students that each student can ask for vote\n"
-              << "  --b <int>       Specify the Penalty for voting for absent student\n"
-              << "  --p <float>     Specify the Probability that a student is marked present if he/she is present\n"
-              << "  --q <float>     Specify the Probability that a student is marked present if he/she is absent\n"
-              << "  --r <float>     Specify the Probability that a student is present in the class\n"
-              << std::endl;
-}
-
-double calc_precision(std::vector<bool> &gold, std::vector<bool> &pred)
-{
-    int tp = 0, fp = 0;
-    for (int i = 0; i < gold.size(); i++)
-    {
-        if (gold[i] && pred[i])
-            tp++;
-        else if (pred[i] && !gold[i])
-            fp++;
-    }
-    return (double)tp / (tp + fp);
-}
-
-double calc_recall(std::vector<bool> &gold, std::vector<bool> &pred)
-{
-    int tp = 0, fn = 0;
-    for (int i = 0; i < gold.size(); i++)
-    {
-        if (gold[i] && pred[i])
-            tp++;
-        else if (gold[i] && !pred[i])
-            fn++;
-    }
-    return (double)tp / (tp + fn);
-}
-
-double calc_f1_score(std::vector<bool> &gold, std::vector<bool> &pred)
-{
-    int tp = 0, fn = 0, fp = 0;
-    for (int i = 0; i < gold.size(); i++)
-    {
-        if (gold[i] && pred[i])
-            tp++;
-        else if (gold[i] && !pred[i])
-            fn++;
-        else if (!gold[i] && pred[i])
-            fp++;
-    }
-    return (double)(2 * tp) / (2 * tp + fn + fp);
-}
+#include "helper.hpp"
 
 /*
 Simulate the decentralized attendance system in a class
@@ -78,7 +20,7 @@ r: Probability that a student is present in the class
 seed: Random Number Generator Seed
 b: b for voting for absent student
 */
-inline double simulate(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 5)
+inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 5)
 {
     std::bernoulli_distribution vote_present_dist(p);
     std::bernoulli_distribution vote_absent_dist(q);
@@ -133,10 +75,13 @@ inline double simulate(int n, int m, int k, int a, float p, float q, float r, in
 
     // Roll Call random students and check if they are present
     std::vector<int> attendance_criteria(n, k); // Effective k for each student separately
+    std::vector<bool> marked_status(n), marked_present(n);
     std::shuffle(students.begin(), students.end(), generator);
     for (int i = 0; i < m; i++)
     {
         int student = students[i];
+        marked_present[student] = present_status[student];
+        marked_status[student] = true;
         if (!present_status[student])
         {
             attendance_criteria[student] = n + 1;
@@ -146,9 +91,10 @@ inline double simulate(int n, int m, int k, int a, float p, float q, float r, in
     }
 
     // Check if each student is present or not
-    std::vector<bool> marked_present(n);
     for (int i = 0; i < n; i++)
     {
+        if (marked_status[i])
+            continue;
         // std::cout << "Student " << i << " : " << voters[i].size() << std::endl;
         if (voters[i].size() >= attendance_criteria[i])
             marked_present[i] = true;
@@ -156,11 +102,43 @@ inline double simulate(int n, int m, int k, int a, float p, float q, float r, in
             marked_present[i] = false;
     }
 
-    std::cout << "Precision: " << calc_precision(present_status, marked_present) << std::endl;
-    std::cout << "Recall: " << calc_recall(present_status, marked_present) << std::endl;
+    return Stats().calc_stats(present_status, marked_present);
+}
 
-    double f1_score = calc_f1_score(present_status, marked_present);
-    return f1_score;
+inline std::pair<Stats, Stats> experiment(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 5)
+{
+    Stats mean;
+    Stats std;
+    for (int i = 0; i < 1000; i++)
+    {
+        Stats result = simulate(n, m, k, a, p, q, r, seed, b);
+        mean += result;
+        std += result * result;
+    }
+    mean /= 1000;
+    std /= 1000;
+    std -= mean * mean;
+    std = std.sqrt();
+    return {mean, std};
+}
+
+void display_help(const std::string &program_name)
+{
+    std::cout << "Usage: " << program_name << " [options]\n"
+              << "Options:\n"
+              << "  --help          Display this help message\n"
+              << "  --threads <int> Specify the Number of Parallel Threads to use\n"
+              << "  --seed <int>    Specify the random number generator seed\n"
+              << "  --sim <int>     Specify the Number of Simulations\n"
+              << "  --n <int>       Specify the Number of Students in the Class\n"
+              << "  --m <int>       Specify the Number of Students to pick for rollcall\n"
+              << "  --k <int>       Specify the Minimum Number of Votes required to be present\n"
+              << "  --a <int>       Specify the Maximum Number of students that each student can ask for vote\n"
+              << "  --b <int>       Specify the Penalty for voting for absent student\n"
+              << "  --p <float>     Specify the Probability that a student is marked present if he/she is present\n"
+              << "  --q <float>     Specify the Probability that a student is marked present if he/she is absent\n"
+              << "  --r <float>     Specify the Probability that a student is present in the class\n"
+              << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -287,10 +265,12 @@ int main(int argc, char *argv[])
     std::cout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
     std::cout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
     std::cout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
-    std::cout << "############################################################################ " << std::endl;
+    std::cout << "---------------------------------------------------------------------------- " << std::endl;
 
-    double f1_score = simulate(n, m, k, a, p, q, r);
-    std::cout << "F1 Score: " << f1_score << std::endl;
+    Stats result = simulate(n, m, k, a, p, q, r);
+    std::cout << "############################ SIMULATION RESULTS ############################" << std::endl;
+    std::cout << result << std::endl;
+    std::cout << "############################################################################ " << std::endl;
 
     return 0;
 }
