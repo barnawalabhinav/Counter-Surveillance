@@ -1,0 +1,13 @@
+########################## EXPERIMENT PARAMETERS ########################### 
+Number of Threads -------------------------------------------- threads: 1
+Seed (Random Number Generator) ---------------------------------- seed: -1
+Number of Simmulations ------------------------------------------- sim: 1000
+Number of Students in the Class ------------------------------------ n: 100
+Number of Students to pick for rollcall ---------------------------- m: 10
+Minimum Number of Votes required to be present --------------------- k: 10
+Maximum Number of students that each student can ask for vote ------ a: 30
+Penalty for voting a absent student -------------------------------- b: 30
+Probability that a student is marked present if he/she is present -- p: 0.5
+Probability that a student is marked present if he/she is absent --- q: 0.5
+Probability that a student is present in the class ----------------- r: 0.5
+---------------------------------------------------------------------------- 

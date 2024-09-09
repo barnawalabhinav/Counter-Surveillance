@@ -314,7 +314,7 @@ public:
     inline void set_legend(const char *position = "right")
     {
         if (gnuplotPipe)
-            fprintf(gnuplotPipe, "set key %s\n", position);
+            fprintf(gnuplotPipe, "set key box %s\n", position);
     }
 
     /**
@@ -347,6 +347,42 @@ public:
     {
         if (gnuplotPipe)
             fprintf(gnuplotPipe, "set yrange [%f:%f]\n", min, max);
+    }
+
+    /**
+     * @brief Makes x-axis logscale
+     */
+    inline void set_logscale_x()
+    {
+        if (gnuplotPipe)
+            fprintf(gnuplotPipe, "set logscale x\n");
+    }
+
+    /**
+     * @brief Makes y-axis logscale
+     */
+    inline void set_logscale_y()
+    {
+        if (gnuplotPipe)
+            fprintf(gnuplotPipe, "set logscale y\n");
+    }
+
+    /**
+     * @brief Makes x-axis linear scale
+     */
+    inline void unset_logscale_x()
+    {
+        if (gnuplotPipe)
+            fprintf(gnuplotPipe, "unset logscale x\n");
+    }
+
+    /**
+     * @brief Makes y-axis linear scale
+     */
+    inline void unset_logscale_y()
+    {
+        if (gnuplotPipe)
+            fprintf(gnuplotPipe, "unset logscale y\n");
     }
 
     /**
