@@ -55,7 +55,7 @@ struct Stats
             && this->precision >= 0
             && this->recall >= 0
             && this->f1_score >= 0
-            && this->mcc >= 0
+            && this->mcc >= -1
             && this->accuracy <= 1
             && this->precision <= 1
             && this->recall <= 1
@@ -94,7 +94,7 @@ struct Stats
         this->precision = (double)tp / (tp + fp);
         this->recall = (double)tp / (tp + fn);
         this->f1_score = (double)(2 * tp) / (2 * tp + fn + fp);
-        this->mcc = (double)(tp * tn - fp * fn) / std::sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn));
+        this->mcc = (double)(tp * tn - fp * fn) / std::sqrt((tp + fp + 0.01) * (tp + fn + 0.01) * (tn + fp + 0.01) * (tn + fn + 0.01));
         return *this;
     }
 
