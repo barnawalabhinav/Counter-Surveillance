@@ -1,4 +1,4 @@
 test.cpp
-test.o
 .vscode*
 *.out
+*.o
