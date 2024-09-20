@@ -131,13 +131,12 @@ inline Stats simulate(int n, float m, float k, float a, float p, float q, float 
     return stats;
 }
 
-inline std::pair<Stats, Stats> experiment(int n, float m, float k, float a, float p, float q, float r, int seed = -1, float b = 0.05, int threads = 1)
+inline std::pair<Stats, Stats> experiment(int n, float m, float k, float a, float p, float q, float r, int seed = -1, float b = 0.05)
 {
-    Stats res = simulate(n, m, k, a, p, q, r, seed, b, true);
+    // Stats res = simulate(n, m, k, a, p, q, r, seed, b, true);
 
     Stats mean, std;
     int num_sim = 0;
-#pragma omp parallel for reduction(+ : mean, std, num_sim) num_threads(threads)
     for (int i = 0; i < 1000; i++)
     {
         Stats result = simulate(n, m, k, a, p, q, r, seed, b);
@@ -157,6 +156,7 @@ void display_help(const std::string &program_name)
     std::cout << "Usage: " << program_name << " [options]\n"
               << "Options:\n"
               << "  --help          Display this help message\n"
+              << "  --mode <str>    Specify the mode <plot or regress> \n"
               << "  --threads <int> Specify the Number of Parallel Threads to use\n"
               << "  --seed <int>    Specify the random number generator seed\n"
               << "  --sim <int>     Specify the Number of Simulations\n"
@@ -174,17 +174,18 @@ void display_help(const std::string &program_name)
 int main(int argc, char *argv[])
 {
     // ################## PARSING CMD LINE ARGS ##################
-    int num_threads = 1; // Parallel Threads Count
-    int seed = -1;       // Random Number Generator Seed
-    int sim = 1000;      // Simmulations
-    int n = 100;         // Strength
-    float m = 0.1;       // Roll Call Count
-    float k = 0.1;       // Attendance Criteria
-    float a = 0.3;       // Vote Limit
-    float b = 0.05;      // Penalty for voting for absent student
-    float p = 0.75;      // Vote Present Prob
-    float q = 0.25;      // Vote Absent Probt
-    float r = 0.5;       // Present Prob
+    std::string mode = "plot"; // Mode of the program
+    int threads = 1;           // Parallel Threads Count
+    int seed = -1;             // Random Number Generator Seed
+    int sim = 1000;            // Simmulations
+    int n = 100;               // Strength
+    float m = 0.1;             // Roll Call Count
+    float k = 0.1;             // Attendance Criteria
+    float a = 0.3;             // Vote Limit
+    float b = 0.05;            // Penalty for voting for absent student
+    float p = 0.75;            // Vote Present Prob
+    float q = 0.25;            // Vote Absent Probt
+    float r = 0.5;             // Present Prob
 
     for (int i = 1; i < argc; ++i)
     {
@@ -195,8 +196,10 @@ int main(int argc, char *argv[])
             display_help(argv[0]);
             return 0;
         }
+        else if (arg == "--mode" && i + 1 < argc)
+            mode = argv[++i];
         else if (arg == "--threads" && i + 1 < argc)
-            num_threads = std::stoi(argv[++i]);
+            threads = std::stoi(argv[++i]);
         else if (arg == "--seed" && i + 1 < argc)
             seed = std::stoi(argv[++i]);
         else if (arg == "--sim" && i + 1 < argc)
@@ -284,7 +287,8 @@ int main(int argc, char *argv[])
 
     // ################## PRINTING EXPERIMENT PARAMETERS ##################
     std::cout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
-    std::cout << "Number of Threads -------------------------------------------- threads: " << num_threads << std::endl;
+    std::cout << "Mode of the program --------------------------------------------- mode: " << mode << std::endl;
+    std::cout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
     std::cout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
     std::cout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
     std::cout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
@@ -297,9 +301,10 @@ int main(int argc, char *argv[])
     std::cout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
     std::cout << "---------------------------------------------------------------------------- " << std::endl;
 
+    std::vector<float> x(11);
+    std::vector<double> ub(11), lb(11);
+    if (mode == "plot")
     {
-        std::string variable = "n";
-
         std::vector<double> tp_mean(11);
         std::vector<double> fp_mean(11);
         std::vector<double> fn_mean(11);
@@ -320,14 +325,14 @@ int main(int argc, char *argv[])
         std::vector<double> f1_std(11);
         std::vector<double> mcc_std(11);
 
-        std::vector<int> x(11);
-        std::vector<double> ub(11), lb(11);
+        std::string variable = "n";
+
         for (int i = 0; i < 11; i++)
         {
             int var = 10 * i * i + 10;
             x[i] = var;
-            std::pair<Stats, Stats> result = experiment(var, m, k, a, p, q, r, seed, b, num_threads);
-            // std::pair<Stats, Stats> result = experiment(var, m, k/std::cbrt((float) var) , a, p, q, r, seed, b, num_threads);
+            std::pair<Stats, Stats> result = experiment(var, m, k, a, p, q, r, seed, b);
+            // std::pair<Stats, Stats> result = experiment(var, m, k/std::cbrt((float) var) , a, p, q, r, seed, b, threads);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -399,51 +404,30 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
         std::ofstream fout("plots/desc/" + variable + ".txt");
-        std::cout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
-        std::cout << "Number of Threads -------------------------------------------- threads: " << num_threads << std::endl;
-        std::cout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
-        std::cout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
-        std::cout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
-        std::cout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
-        std::cout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
-        std::cout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
-        std::cout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
-        std::cout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
+        fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
+        fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
+        fout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
+        fout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
+        fout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
+        fout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
+        fout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
+        fout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
+        fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
+        fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
+        fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
-    }
 
-    {
-        std::string variable = "p";
+        // ************************************************ //
 
-        std::vector<double> tp_mean(11);
-        std::vector<double> fp_mean(11);
-        std::vector<double> fn_mean(11);
-        std::vector<double> tn_mean(11);
-        std::vector<double> acc_mean(11);
-        std::vector<double> precision_mean(11);
-        std::vector<double> recall_mean(11);
-        std::vector<double> f1_mean(11);
-        std::vector<double> mcc_mean(11);
+        variable = "p";
 
-        std::vector<double> tp_std(11);
-        std::vector<double> fp_std(11);
-        std::vector<double> fn_std(11);
-        std::vector<double> tn_std(11);
-        std::vector<double> acc_std(11);
-        std::vector<double> precision_std(11);
-        std::vector<double> recall_std(11);
-        std::vector<double> f1_std(11);
-        std::vector<double> mcc_std(11);
-
-        std::vector<double> x(11);
-        std::vector<double> ub(11), lb(11);
         for (int i = 0; i < 11; i++)
         {
             float var = 0.1 * i;
             x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, m, k, a, var, q, r, seed, b, num_threads);
+            std::pair<Stats, Stats> result = experiment(n, m, k, a, var, q, r, seed, b);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -465,7 +449,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        Plotter plt;
+        plt.reset();
         plt.set_legend("bottom");
         plt.set_xlim(0, 1);
         plt.set_ylim(-1, 1);
@@ -513,52 +497,31 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        std::ofstream fout("plots/desc/" + variable + ".txt");
-        std::cout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
-        std::cout << "Number of Threads -------------------------------------------- threads: " << num_threads << std::endl;
-        std::cout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
-        std::cout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
-        std::cout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
-        std::cout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
-        std::cout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
-        std::cout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
-        std::cout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
-        std::cout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
+        fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
+        fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
+        fout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
+        fout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
+        fout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
+        fout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
+        fout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
+        fout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
+        fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
+        fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
+        fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
-    }
 
-    {
-        std::string variable = "q";
+        // ************************************************ //
 
-        std::vector<double> tp_mean(11);
-        std::vector<double> fp_mean(11);
-        std::vector<double> fn_mean(11);
-        std::vector<double> tn_mean(11);
-        std::vector<double> acc_mean(11);
-        std::vector<double> precision_mean(11);
-        std::vector<double> recall_mean(11);
-        std::vector<double> f1_mean(11);
-        std::vector<double> mcc_mean(11);
+        variable = "q";
 
-        std::vector<double> tp_std(11);
-        std::vector<double> fp_std(11);
-        std::vector<double> fn_std(11);
-        std::vector<double> tn_std(11);
-        std::vector<double> acc_std(11);
-        std::vector<double> precision_std(11);
-        std::vector<double> recall_std(11);
-        std::vector<double> f1_std(11);
-        std::vector<double> mcc_std(11);
-
-        std::vector<double> x(11);
-        std::vector<double> ub(11), lb(11);
         for (int i = 0; i < 11; i++)
         {
             float var = 0.1 * i;
             x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, m, k, a, p, var, r, seed, b, num_threads);
+            std::pair<Stats, Stats> result = experiment(n, m, k, a, p, var, r, seed, b);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -580,7 +543,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        Plotter plt;
+        plt.reset();
         plt.set_legend("bottom left");
         plt.set_xlim(0, 1);
         plt.set_ylim(-1, 1);
@@ -628,52 +591,31 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        std::ofstream fout("plots/desc/" + variable + ".txt");
-        std::cout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
-        std::cout << "Number of Threads -------------------------------------------- threads: " << num_threads << std::endl;
-        std::cout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
-        std::cout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
-        std::cout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
-        std::cout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
-        std::cout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
-        std::cout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
-        std::cout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
-        std::cout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
+        fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
+        fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
+        fout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
+        fout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
+        fout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
+        fout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
+        fout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
+        fout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
+        fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
+        fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
+        fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
-    }
 
-    {
-        std::string variable = "r";
+        // ************************************************ //
 
-        std::vector<double> tp_mean(11);
-        std::vector<double> fp_mean(11);
-        std::vector<double> fn_mean(11);
-        std::vector<double> tn_mean(11);
-        std::vector<double> acc_mean(11);
-        std::vector<double> precision_mean(11);
-        std::vector<double> recall_mean(11);
-        std::vector<double> f1_mean(11);
-        std::vector<double> mcc_mean(11);
+        variable = "r";
 
-        std::vector<double> tp_std(11);
-        std::vector<double> fp_std(11);
-        std::vector<double> fn_std(11);
-        std::vector<double> tn_std(11);
-        std::vector<double> acc_std(11);
-        std::vector<double> precision_std(11);
-        std::vector<double> recall_std(11);
-        std::vector<double> f1_std(11);
-        std::vector<double> mcc_std(11);
-
-        std::vector<float> x(11);
-        std::vector<double> ub(11), lb(11);
         for (int i = 0; i < 11; i++)
         {
             float var = 0.05 * (i + 2);
             x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, var, seed, b, num_threads);
+            std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, var, seed, b);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -695,7 +637,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        Plotter plt;
+        plt.reset();
         plt.set_legend("bottom");
         // plt.set_logscale_x();
         plt.set_xlim(x[0], x.back());
@@ -744,47 +686,26 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        std::ofstream fout("plots/desc/" + variable + ".txt");
-        std::cout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
-        std::cout << "Number of Threads -------------------------------------------- threads: " << num_threads << std::endl;
-        std::cout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
-        std::cout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
-        std::cout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
-        std::cout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
-        std::cout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
-        std::cout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
-        std::cout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
-        std::cout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
+        fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
+        fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
+        fout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
+        fout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
+        fout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
+        fout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
+        fout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
+        fout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
+        fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
+        fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
+        fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
-    }
 
-    {
-        std::string variable = "m";
+        // ************************************************ //
 
-        std::vector<double> tp_mean(11);
-        std::vector<double> fp_mean(11);
-        std::vector<double> fn_mean(11);
-        std::vector<double> tn_mean(11);
-        std::vector<double> acc_mean(11);
-        std::vector<double> precision_mean(11);
-        std::vector<double> recall_mean(11);
-        std::vector<double> f1_mean(11);
-        std::vector<double> mcc_mean(11);
+        variable = "m";
 
-        std::vector<double> tp_std(11);
-        std::vector<double> fp_std(11);
-        std::vector<double> fn_std(11);
-        std::vector<double> tn_std(11);
-        std::vector<double> acc_std(11);
-        std::vector<double> precision_std(11);
-        std::vector<double> recall_std(11);
-        std::vector<double> f1_std(11);
-        std::vector<double> mcc_std(11);
-
-        std::vector<float> x(11);
-        std::vector<double> ub(11), lb(11);
         for (int i = 0; i < 11; i++)
         {
             float var = n / (i + 2);
@@ -792,7 +713,7 @@ int main(int argc, char *argv[])
                 var = x[i - 1] * n - 2;
             var /= n;
             x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, var, k, a, p, q, r, seed, b, num_threads);
+            std::pair<Stats, Stats> result = experiment(n, var, k, a, p, q, r, seed, b);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -814,7 +735,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        Plotter plt;
+        plt.reset();
         plt.set_legend("bottom");
         // plt.set_logscale_x();
         plt.set_xlim(x.back(), x[0]);
@@ -863,47 +784,26 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        std::ofstream fout("plots/desc/" + variable + ".txt");
-        std::cout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
-        std::cout << "Number of Threads -------------------------------------------- threads: " << num_threads << std::endl;
-        std::cout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
-        std::cout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
-        std::cout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
-        std::cout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
-        std::cout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
-        std::cout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
-        std::cout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
-        std::cout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
+        fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
+        fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
+        fout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
+        fout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
+        fout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
+        fout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
+        fout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
+        fout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
+        fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
+        fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
+        fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
-    }
 
-    {
-        std::string variable = "k";
+        // ************************************************ //
 
-        std::vector<double> tp_mean(11);
-        std::vector<double> fp_mean(11);
-        std::vector<double> fn_mean(11);
-        std::vector<double> tn_mean(11);
-        std::vector<double> acc_mean(11);
-        std::vector<double> precision_mean(11);
-        std::vector<double> recall_mean(11);
-        std::vector<double> f1_mean(11);
-        std::vector<double> mcc_mean(11);
+        variable = "k";
 
-        std::vector<double> tp_std(11);
-        std::vector<double> fp_std(11);
-        std::vector<double> fn_std(11);
-        std::vector<double> tn_std(11);
-        std::vector<double> acc_std(11);
-        std::vector<double> precision_std(11);
-        std::vector<double> recall_std(11);
-        std::vector<double> f1_std(11);
-        std::vector<double> mcc_std(11);
-
-        std::vector<float> x(11);
-        std::vector<double> ub(11), lb(11);
         for (int i = 0; i < 11; i++)
         {
             float var = 2 * a * n / (i + 2);
@@ -911,7 +811,7 @@ int main(int argc, char *argv[])
                 var = x[i - 1] * n - 2;
             var /= n;
             x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, m, var, a, p, q, r, seed, b, num_threads);
+            std::pair<Stats, Stats> result = experiment(n, m, var, a, p, q, r, seed, b);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -933,7 +833,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        Plotter plt;
+        plt.reset();
         plt.set_legend("bottom left");
         // plt.set_logscale_x();
         plt.set_xlim(x.back(), x[0]);
@@ -982,47 +882,26 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        std::ofstream fout("plots/desc/" + variable + ".txt");
-        std::cout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
-        std::cout << "Number of Threads -------------------------------------------- threads: " << num_threads << std::endl;
-        std::cout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
-        std::cout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
-        std::cout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
-        std::cout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
-        std::cout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
-        std::cout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
-        std::cout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
-        std::cout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
+        fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
+        fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
+        fout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
+        fout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
+        fout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
+        fout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
+        fout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
+        fout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
+        fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
+        fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
+        fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
-    }
 
-    {
-        std::string variable = "b";
+        // ************************************************ //
 
-        std::vector<double> tp_mean(11);
-        std::vector<double> fp_mean(11);
-        std::vector<double> fn_mean(11);
-        std::vector<double> tn_mean(11);
-        std::vector<double> acc_mean(11);
-        std::vector<double> precision_mean(11);
-        std::vector<double> recall_mean(11);
-        std::vector<double> f1_mean(11);
-        std::vector<double> mcc_mean(11);
+        variable = "b";
 
-        std::vector<double> tp_std(11);
-        std::vector<double> fp_std(11);
-        std::vector<double> fn_std(11);
-        std::vector<double> tn_std(11);
-        std::vector<double> acc_std(11);
-        std::vector<double> precision_std(11);
-        std::vector<double> recall_std(11);
-        std::vector<double> f1_std(11);
-        std::vector<double> mcc_std(11);
-
-        std::vector<float> x(11);
-        std::vector<double> ub(11), lb(11);
         for (int i = 0; i < 11; i++)
         {
             float var = 2 * a * n / (i + 2);
@@ -1030,7 +909,7 @@ int main(int argc, char *argv[])
                 var = x[i - 1] * n - 2;
             var /= n;
             x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, var, num_threads);
+            std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, var);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -1052,7 +931,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        Plotter plt;
+        plt.reset();
         plt.set_legend("bottom");
         // plt.set_logscale_x();
         plt.set_xlim(x.back(), x[0]);
@@ -1101,47 +980,26 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        std::ofstream fout("plots/desc/" + variable + ".txt");
-        std::cout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
-        std::cout << "Number of Threads -------------------------------------------- threads: " << num_threads << std::endl;
-        std::cout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
-        std::cout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
-        std::cout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
-        std::cout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
-        std::cout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
-        std::cout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
-        std::cout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
-        std::cout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
+        fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
+        fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
+        fout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
+        fout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
+        fout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
+        fout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
+        fout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
+        fout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
+        fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
+        fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
+        fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
-    }
 
-    {
-        std::string variable = "a";
+        // ************************************************ //
 
-        std::vector<double> tp_mean(11);
-        std::vector<double> fp_mean(11);
-        std::vector<double> fn_mean(11);
-        std::vector<double> tn_mean(11);
-        std::vector<double> acc_mean(11);
-        std::vector<double> precision_mean(11);
-        std::vector<double> recall_mean(11);
-        std::vector<double> f1_mean(11);
-        std::vector<double> mcc_mean(11);
+        variable = "a";
 
-        std::vector<double> tp_std(11);
-        std::vector<double> fp_std(11);
-        std::vector<double> fn_std(11);
-        std::vector<double> tn_std(11);
-        std::vector<double> acc_std(11);
-        std::vector<double> precision_std(11);
-        std::vector<double> recall_std(11);
-        std::vector<double> f1_std(11);
-        std::vector<double> mcc_std(11);
-
-        std::vector<float> x(11);
-        std::vector<double> ub(11), lb(11);
         for (int i = 0; i < 11; i++)
         {
             float var = n / (i + 2) + k;
@@ -1149,7 +1007,7 @@ int main(int argc, char *argv[])
                 var = x[i - 1] * n - 2;
             var /= n;
             x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, m, k, var, p, q, r, seed, b, num_threads);
+            std::pair<Stats, Stats> result = experiment(n, m, k, var, p, q, r, seed, b);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -1171,7 +1029,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        Plotter plt;
+        plt.reset();
         plt.set_legend("bottom");
         // plt.set_logscale_x();
         plt.set_xlim(x.back(), x[0]);
@@ -1220,24 +1078,323 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        std::ofstream fout("plots/desc/" + variable + ".txt");
-        std::cout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
-        std::cout << "Number of Threads -------------------------------------------- threads: " << num_threads << std::endl;
-        std::cout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
-        std::cout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
-        std::cout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
-        std::cout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
-        std::cout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
-        std::cout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
-        std::cout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
-        std::cout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
-        std::cout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
+        fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
+        fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
+        fout << "Number of Simmulations ------------------------------------------- sim: " << sim << std::endl;
+        fout << "Number of Students in the Class ------------------------------------ n: " << n << std::endl;
+        fout << "Fraction of Students to pick for rollcall -------------------------- m: " << m << std::endl;
+        fout << "Minimum Number of Votes required to be present (as Fraction of n) -- k: " << k << std::endl;
+        fout << "Maximum Fraction of students that each student can ask for vote ---- a: " << a << std::endl;
+        fout << "Penalty for voting a absent student (as Fraction of n) ------------- b: " << b << std::endl;
+        fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
+        fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
+        fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
+    }
+    else
+    {
+        std::vector<std::vector<double>> tp_mean(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> fp_mean(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> fn_mean(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> tn_mean(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> acc_mean(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> precision_mean(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> recall_mean(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> f1_mean(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> mcc_mean(5, std::vector<double>(11, 0));
+
+        std::vector<std::vector<double>> tp_std(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> fp_std(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> fn_std(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> tn_std(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> acc_std(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> precision_std(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> recall_std(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> f1_std(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> mcc_std(5, std::vector<double>(11, 0));
+
+        std::vector<std::vector<float>> best_a(5, std::vector<float>(11));
+        std::vector<std::vector<float>> best_k(5, std::vector<float>(11));
+        std::vector<std::vector<float>> best_m(5, std::vector<float>(11));
+        std::vector<std::vector<float>> best_b(5, std::vector<float>(11));
+
+        std::string variable = "n";
+
+        int cnt = 0;
+
+        for (int i = 0; i < 11; i++)
+        {
+            int n = 10 * i * i + 10;
+            x[i] = n;
+
+            std::vector<std::vector<float>> controls;
+            for (float a = 0.09; a < 1.0; a += 0.09)
+                for (float m = 0.045; m < 0.5; m += 0.045)
+                    for (float k = 0.09 * a; k < a; k += 0.09 * a)
+                        for (float b = 0.09 * a; b < a; b += 0.09 * a)
+                            controls.push_back({a, m, k, b});
+
+            std::vector<std::vector<std::pair<Stats, Stats>>> best_result(threads, std::vector<std::pair<Stats, Stats>>(5, {Stats(), Stats()}));
+            std::vector<std::vector<std::vector<float>>> best_control(threads, std::vector<std::vector<float>>(5));
+
+#pragma omp parallel for num_threads(threads)
+            for (std::vector<float> v : controls)
+            {
+                cnt++;
+                int t = omp_get_thread_num();
+                std::cout << "Thread " << t << " : " << cnt << std::endl;
+                
+                a = v[0];
+                m = v[1];
+                k = v[2];
+                b = v[3];
+                std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, b);
+                if (result.first.accuracy > best_result[t][0].first.accuracy)
+                {
+                    best_result[t][0] = result;
+                    best_control[t][0] = v;
+                }
+                if (result.first.precision > best_result[t][1].first.precision)
+                {
+                    best_result[t][1] = result;
+                    best_control[t][1] = v;
+                }
+                if (result.first.recall > best_result[t][2].first.recall)
+                {
+                    best_result[t][2] = result;
+                    best_control[t][2] = v;
+                }
+                if (result.first.f1_score > best_result[t][3].first.f1_score)
+                {
+                    best_result[t][3] = result;
+                    best_control[t][3] = v;
+                }
+                if (result.first.mcc > best_result[t][4].first.mcc)
+                {
+                    best_result[t][4] = result;
+                    best_control[t][4] = v;
+                }
+            }
+
+            for (int t = 0; t < threads; t++)
+            {
+                if (best_result[t][0].first.accuracy > acc_mean[0][i])
+                {
+                    acc_mean[0][i] = best_result[t][0].first.accuracy;
+                    precision_mean[0][i] = best_result[t][0].first.precision;
+                    recall_mean[0][i] = best_result[t][0].first.recall;
+                    f1_mean[0][i] = best_result[t][0].first.f1_score;
+                    mcc_mean[0][i] = best_result[t][0].first.mcc;
+
+                    acc_std[0][i] = best_result[t][0].second.accuracy;
+                    precision_std[0][i] = best_result[t][0].second.precision;
+                    recall_std[0][i] = best_result[t][0].second.recall;
+                    f1_std[0][i] = best_result[t][0].second.f1_score;
+                    mcc_std[0][i] = best_result[t][0].second.mcc;
+
+                    best_a[0][i] = best_control[t][0][0];
+                    best_m[0][i] = best_control[t][0][1];
+                    best_k[0][i] = best_control[t][0][2];
+                    best_b[0][i] = best_control[t][0][3];
+                }
+                if (best_result[t][1].first.precision > precision_mean[1][i])
+                {
+                    acc_mean[1][i] = best_result[t][1].first.accuracy;
+                    precision_mean[1][i] = best_result[t][1].first.precision;
+                    recall_mean[1][i] = best_result[t][1].first.recall;
+                    f1_mean[1][i] = best_result[t][1].first.f1_score;
+                    mcc_mean[1][i] = best_result[t][1].first.mcc;
+
+                    acc_std[1][i] = best_result[t][1].second.accuracy;
+                    precision_std[1][i] = best_result[t][1].second.precision;
+                    recall_std[1][i] = best_result[t][1].second.recall;
+                    f1_std[1][i] = best_result[t][1].second.f1_score;
+                    mcc_std[1][i] = best_result[t][1].second.mcc;
+
+                    best_a[1][i] = best_control[t][1][0];
+                    best_m[1][i] = best_control[t][1][1];
+                    best_k[1][i] = best_control[t][1][2];
+                    best_b[1][i] = best_control[t][1][3];
+                }
+                if (best_result[t][2].first.recall > recall_mean[2][i])
+                {
+                    acc_mean[2][i] = best_result[t][2].first.accuracy;
+                    precision_mean[2][i] = best_result[t][2].first.precision;
+                    recall_mean[2][i] = best_result[t][2].first.recall;
+                    f1_mean[2][i] = best_result[t][2].first.f1_score;
+                    mcc_mean[2][i] = best_result[t][2].first.mcc;
+
+                    acc_std[2][i] = best_result[t][2].second.accuracy;
+                    precision_std[2][i] = best_result[t][2].second.precision;
+                    recall_std[2][i] = best_result[t][2].second.recall;
+                    f1_std[2][i] = best_result[t][2].second.f1_score;
+                    mcc_std[2][i] = best_result[t][2].second.mcc;
+
+                    best_a[2][i] = best_control[t][2][0];
+                    best_m[2][i] = best_control[t][2][1];
+                    best_k[2][i] = best_control[t][2][2];
+                    best_b[2][i] = best_control[t][2][3];
+                }
+                if (best_result[t][3].first.f1_score > f1_mean[3][i])
+                {
+                    acc_mean[3][i] = best_result[t][3].first.accuracy;
+                    precision_mean[3][i] = best_result[t][3].first.precision;
+                    recall_mean[3][i] = best_result[t][3].first.recall;
+                    f1_mean[3][i] = best_result[t][3].first.f1_score;
+                    mcc_mean[3][i] = best_result[t][3].first.mcc;
+
+                    acc_std[3][i] = best_result[t][3].second.accuracy;
+                    precision_std[3][i] = best_result[t][3].second.precision;
+                    recall_std[3][i] = best_result[t][3].second.recall;
+                    f1_std[3][i] = best_result[t][3].second.f1_score;
+                    mcc_std[3][i] = best_result[t][3].second.mcc;
+
+                    best_a[3][i] = best_control[t][3][0];
+                    best_m[3][i] = best_control[t][3][1];
+                    best_k[3][i] = best_control[t][3][2];
+                    best_b[3][i] = best_control[t][3][3];
+                }
+                if (best_result[t][4].first.mcc > mcc_mean[4][i])
+                {
+                    acc_mean[4][i] = best_result[t][4].first.accuracy;
+                    precision_mean[4][i] = best_result[t][4].first.precision;
+                    recall_mean[4][i] = best_result[t][4].first.recall;
+                    f1_mean[4][i] = best_result[t][4].first.f1_score;
+                    mcc_mean[4][i] = best_result[t][4].first.mcc;
+
+                    acc_std[4][i] = best_result[t][4].second.accuracy;
+                    precision_std[4][i] = best_result[t][4].second.precision;
+                    recall_std[4][i] = best_result[t][4].second.recall;
+                    f1_std[4][i] = best_result[t][4].second.f1_score;
+                    mcc_std[4][i] = best_result[t][4].second.mcc;
+
+                    best_a[4][i] = best_control[t][4][0];
+                    best_m[4][i] = best_control[t][4][1];
+                    best_k[4][i] = best_control[t][4][2];
+                    best_b[4][i] = best_control[t][4][3];
+                }
+            }
+        }
+
+        Plotter plt;
+        plt.set_legend("bottom");
+        // plt.set_logscale_x();
+        plt.set_xlim(x[0], x.back());
+        plt.set_ylim(0, 1);
+        plt.set_xlabel(("Class Strength (" + variable + ")").c_str());
+
+        // ************************************************ //
+        for (int j = 0; j < 5; j++)
+        {
+            if (j == 0)
+            {
+                plt.set_title("Model Performance when maximizing \"Accuracy\"");
+                plt.set_savePath("plots/acc_metric.png");
+            }
+            else if (j == 1)
+            {
+                plt.set_title("Model Performance when maximizing \"Precision\"");
+                plt.set_savePath("plots/prec_metric.png");
+            }
+            else if (j == 2)
+            {
+                plt.set_title("Model Performance when maximizing \"Recall\"");
+                plt.set_savePath("plots/rec_metric.png");
+            }
+            else if (j == 3)
+            {
+                plt.set_title("Model Performance when maximizing \"F1-Score\"");
+                plt.set_savePath("plots/f1_metric.png");
+            }
+            else
+            {
+                plt.set_title("Model Performance when maximizing \"MCC\"");
+                plt.set_savePath("plots/mcc_metric.png");
+            }
+
+            plt.createPlot(x, acc_mean[j], "Accuracy", "red", Plotter::CircleF, 1.0, 3.0);
+            for (int i = 0; i < 11; i++)
+            {
+                ub[i] = acc_mean[j][i] + acc_std[j][i];
+                lb[i] = acc_mean[j][i] - acc_std[j][i];
+            }
+            plt.fillBetween(x, ub, lb, "red", 0.1);
+
+            plt.addPlot(x, precision_mean[j], "Precision", "blue", Plotter::BoxF, 1.0, 3.0);
+            for (int i = 0; i < 11; i++)
+            {
+                ub[i] = precision_mean[j][i] + precision_std[j][i];
+                lb[i] = precision_mean[j][i] - precision_std[j][i];
+            }
+            plt.fillBetween(x, ub, lb, "blue", 0.1);
+
+            plt.addPlot(x, recall_mean[j], "Recall", "green", Plotter::TriDF, 1.0, 3.0);
+            for (int i = 0; i < 11; i++)
+            {
+                ub[i] = recall_mean[j][i] + recall_std[j][i];
+                lb[i] = recall_mean[j][i] - recall_std[j][i];
+            }
+            plt.fillBetween(x, ub, lb, "green", 0.1);
+
+            plt.addPlot(x, f1_mean[j], "F1 Score", "black", Plotter::TriUF, 1.0, 3.0);
+            for (int i = 0; i < 11; i++)
+            {
+                ub[i] = f1_mean[j][i] + f1_std[j][i];
+                lb[i] = f1_mean[j][i] - f1_std[j][i];
+            }
+            plt.fillBetween(x, ub, lb, "black", 0.1);
+
+            plt.addPlot(x, mcc_mean[j], "MCC", "brown", Plotter::DiaF, 1.0, 3.0);
+            for (int i = 0; i < 11; i++)
+            {
+                ub[i] = mcc_mean[j][i] + mcc_std[j][i];
+                lb[i] = mcc_mean[j][i] - mcc_std[j][i];
+            }
+            plt.fillBetween(x, ub, lb, "brown", 0.1);
+            
+            plt.plot();
+
+            // ************************************************ //
+            
+            if (j == 0)
+            {
+                plt.set_title("Best Control Variables when maximizing \"Accuracy\"");
+                plt.set_savePath("plots/acc_control.png");
+            }
+            else if (j == 1)
+            {
+                plt.set_title("Best Control Variables when maximizing \"Precision\"");
+                plt.set_savePath("plots/prec_control.png");
+            }
+            else if (j == 2)
+            {
+                plt.set_title("Best Control Variables when maximizing \"Recall\"");
+                plt.set_savePath("plots/rec_control.png");
+            }
+            else if (j == 3)
+            {
+                plt.set_title("Best Control Variables when maximizing \"F1-Score\"");
+                plt.set_savePath("plots/f1_control.png");
+            }
+            else
+            {
+                plt.set_title("Best Control Variables when maximizing \"MCC\"");
+                plt.set_savePath("plots/mcc_control.png");
+            }
+
+            plt.createPlot(x, best_a[j], "a", "red", Plotter::CircleF, 1.0, 3.0);
+            plt.addPlot(x, best_m[j], "m", "blue", Plotter::BoxF, 1.0, 3.0);
+            plt.addPlot(x, best_b[j], "b", "green", Plotter::TriDF, 1.0, 3.0);
+            plt.addPlot(x, best_k[j], "k", "black", Plotter::TriUF, 1.0, 3.0);
+            plt.plot();
+        }
     }
 
     // std::cout << "############################ SIMULATION RESULTS ############################" << std::endl;
-    // std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, b, num_threads);
+    // std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, b, threads);
     // std::cout << result << std::endl;
     // std::cout << "############################################################################ " << std::endl;
 
