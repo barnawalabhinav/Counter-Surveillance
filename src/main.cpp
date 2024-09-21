@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <vector>
 #include <random>
@@ -41,7 +42,7 @@ inline Stats simulate(int n, float m, float k, float a, float p, float q, float 
         generator = std::mt19937(seed);
 
     std::vector<bool> present_status(n);
-    std::vector<int> voters[n];
+    std::vector<std::vector<int>> voters(n, std::vector<int>());
     std::vector<int> students(n);
     for (int i = 0; i < n; ++i)
     {
@@ -1131,11 +1132,29 @@ int main(int argc, char *argv[])
             x[i] = n;
 
             std::vector<std::vector<float>> controls;
-            for (float a = 0.09; a < 1.0; a += 0.09)
-                for (float m = 0.045; m < 0.5; m += 0.045)
-                    for (float k = 0.09 * a; k < a; k += 0.09 * a)
-                        for (float b = 0.09 * a; b < a; b += 0.09 * a)
+            // for (float a = 0.09; a < 1.0; a += 0.09)
+            //     for (float m = 0.045; m < 0.5; m += 0.045)
+            //         for (float k = 0.09 * a; k < a; k += 0.09 * a)
+            //             for (float b = 0.09 * a; b < a; b += 0.09 * a)
+            //                 controls.push_back({a, m, k, b});
+
+            for (float a = 0.1; a < 0.9; a += 0.09)
+                for (float m = 0.1; m < 0.5; m += 0.045)
+                    for (float k = 0.1 * a; k < a*0.9; k += 0.09 * a)
+                        for (float b = 0.1 * a*0.9; b < a; b += 0.09 * a)
                             controls.push_back({a, m, k, b});
+
+            // for (float a = 0.1; a < 0.9; a += 0.3)
+            //     for (float m = 0.1; m < 0.5; m += 0.15)
+            //         for (float k = 0.1 * a; k < a*0.9; k += 0.3 * a)
+            //             for (float b = 0.1 * a*0.9; b < a; b += 0.3 * a)
+            //                 controls.push_back({a, m, k, b});
+
+            // for (float a = 0.1; a < 0.9; a += 0.7)
+            //     for (float m = 0.1; m < 0.5; m += 0.35)
+            //         for (float k = 0.1 * a; k < a * 0.9; k += 0.7 * a)
+            //             for (float b = 0.1 * a * 0.9; b < a; b += 0.7 * a)
+            //                 controls.push_back({a, m, k, b});
 
             std::vector<std::vector<std::pair<Stats, Stats>>> best_result(threads, std::vector<std::pair<Stats, Stats>>(5, {Stats(), Stats()}));
             std::vector<std::vector<std::vector<float>>> best_control(threads, std::vector<std::vector<float>>(5));
@@ -1145,8 +1164,8 @@ int main(int argc, char *argv[])
             {
                 cnt++;
                 int t = omp_get_thread_num();
-                std::cout << "Thread " << t << " : " << cnt << std::endl;
-                
+                // std::cout << "Thread " << t << " : " << i << ", " << cnt << std::endl;
+
                 a = v[0];
                 m = v[1];
                 k = v[2];
@@ -1287,32 +1306,47 @@ int main(int argc, char *argv[])
         plt.set_xlabel(("Class Strength (" + variable + ")").c_str());
 
         // ************************************************ //
+        std::ofstream fout;
+        std::stringstream stream;
+        stream << std::fixed << std::setprecision(2) << p;
+        std::string p_str = stream.str();
+        stream.str("");
+        stream << std::fixed << std::setprecision(2) << q;
+        std::string q_str = stream.str();
+        stream.str("");
+        stream << std::fixed << std::setprecision(2) << r;
+        std::string r_str = stream.str();
         for (int j = 0; j < 5; j++)
         {
             if (j == 0)
             {
                 plt.set_title("Model Performance when maximizing \"Accuracy\"");
                 plt.set_savePath("plots/acc_metric.png");
+                fout = std::ofstream("plots/desc/accuracy_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
             else if (j == 1)
             {
                 plt.set_title("Model Performance when maximizing \"Precision\"");
                 plt.set_savePath("plots/prec_metric.png");
+                fout = std::ofstream("plots/desc/precision_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
             else if (j == 2)
             {
                 plt.set_title("Model Performance when maximizing \"Recall\"");
                 plt.set_savePath("plots/rec_metric.png");
+                fout = std::ofstream("plots/desc/recall_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
             else if (j == 3)
             {
                 plt.set_title("Model Performance when maximizing \"F1-Score\"");
                 plt.set_savePath("plots/f1_metric.png");
+                fout = std::ofstream("plots/desc/f1-score_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
             else
             {
                 plt.set_title("Model Performance when maximizing \"MCC\"");
                 plt.set_savePath("plots/mcc_metric.png");
+                fout = std::ofstream("plots/desc/mcc_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
 
             plt.createPlot(x, acc_mean[j], "Accuracy", "red", Plotter::CircleF, 1.0, 3.0);
@@ -1354,11 +1388,11 @@ int main(int argc, char *argv[])
                 lb[i] = mcc_mean[j][i] - mcc_std[j][i];
             }
             plt.fillBetween(x, ub, lb, "brown", 0.1);
-            
+
             plt.plot();
 
             // ************************************************ //
-            
+
             if (j == 0)
             {
                 plt.set_title("Best Control Variables when maximizing \"Accuracy\"");
@@ -1390,6 +1424,23 @@ int main(int argc, char *argv[])
             plt.addPlot(x, best_b[j], "b", "green", Plotter::TriDF, 1.0, 3.0);
             plt.addPlot(x, best_k[j], "k", "black", Plotter::TriUF, 1.0, 3.0);
             plt.plot();
+
+            fout << "best a:";
+            for (float a : best_a[j])
+                fout << " " << a;
+            fout << std::endl;
+            fout << "best m:";
+            for (float m : best_m[j])
+                fout << " " << m;
+            fout << std::endl;
+            fout << "best k:";
+            for (float k : best_k[j])
+                fout << " " << k;
+            fout << std::endl;
+            fout << "best b:";
+            for (float b : best_b[j])
+                fout << " " << b;
+            fout << std::endl;
         }
     }
 
