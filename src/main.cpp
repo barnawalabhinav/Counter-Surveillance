@@ -151,6 +151,27 @@ inline std::pair<Stats, Stats> experiment(int n, float m, float k, float a, floa
     return {mean, std};
 }
 
+// Function to compute the least squares coefficient for a given variable
+template<typename T1, typename T2>
+inline void fitLinear(const std::vector<T1> &x, std::vector<std::vector<T2>> &y, std::string var_name)
+{
+    std::string metric[5] = {"Accuracy", "Precision", "Recall", "F1-Score", "MCC"};
+
+    for (int i = 0; i < y.size(); i++)
+    {
+        double sum_x = 0.0, sum_x2 = 0.0, sum_y = 0.0, sum_xy = 0.0;
+        for (int j = 0; j < x.size(); j++)
+        {
+            sum_x += x[j];
+            sum_x2 += x[j] * x[j];
+            sum_y += y[i][j];
+            sum_xy += x[j] * y[i][j];
+        }
+        double c = sum_xy / sum_x2;
+        std::cout << var_name << " varies as (" << c << " * n) when optimizing for " << metric[i] << std::endl;
+    }
+}
+
 void display_help(const std::string &program_name)
 {
     std::cout << "Usage: " << program_name << " [options]\n"
@@ -1116,10 +1137,10 @@ int main(int argc, char *argv[])
         std::vector<std::vector<double>> f1_std(5, std::vector<double>(11, 0));
         std::vector<std::vector<double>> mcc_std(5, std::vector<double>(11, 0));
 
-        std::vector<std::vector<float>> best_a(5, std::vector<float>(11));
-        std::vector<std::vector<float>> best_k(5, std::vector<float>(11));
-        std::vector<std::vector<float>> best_m(5, std::vector<float>(11));
-        std::vector<std::vector<float>> best_b(5, std::vector<float>(11));
+        std::vector<std::vector<int>> best_a(5, std::vector<int>(11));
+        std::vector<std::vector<int>> best_k(5, std::vector<int>(11));
+        std::vector<std::vector<int>> best_m(5, std::vector<int>(11));
+        std::vector<std::vector<int>> best_b(5, std::vector<int>(11));
 
         std::string variable = "n";
 
@@ -1153,10 +1174,10 @@ int main(int argc, char *argv[])
                 int t = omp_get_thread_num();
                 // std::cout << "Thread " << t << " : " << i << ", " << cnt << std::endl;
 
-                a = ((float) v[0]) / ((float) n);
-                m = ((float) v[1]) / ((float) n);
-                k = ((float) v[2]) / ((float) n);
-                b = ((float) v[3]) / ((float) n);
+                a = ((float)v[0]) / ((float)n);
+                m = ((float)v[1]) / ((float)n);
+                k = ((float)v[2]) / ((float)n);
+                b = ((float)v[3]) / ((float)n);
                 std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, b);
                 if (result.first.accuracy > best_result[t][0].first.accuracy)
                 {
@@ -1423,6 +1444,11 @@ int main(int argc, char *argv[])
             for (int i = 0; i < x.size(); i++)
                 fout << x[i] << "," << best_a[j][i] << "," << best_m[j][i] << "," << best_k[j][i] << "," << best_b[j][i] << std::endl;
         }
+
+        fitLinear(x, best_a, "a");
+        fitLinear(x, best_m, "m");
+        fitLinear(x, best_k, "k");
+        fitLinear(x, best_b, "b");
     }
 
     return 0;
