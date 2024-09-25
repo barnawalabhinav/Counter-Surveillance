@@ -152,7 +152,7 @@ inline std::pair<Stats, Stats> experiment(int n, float m, float k, float a, floa
 }
 
 // Function to compute the least squares coefficient for a given variable
-template<typename T1, typename T2>
+template <typename T1, typename T2>
 inline void fitLinear(const std::vector<T1> &x, std::vector<std::vector<T2>> &y, std::string var_name)
 {
     std::string metric[5] = {"Accuracy", "Precision", "Recall", "F1-Score", "MCC"};
@@ -322,33 +322,35 @@ int main(int argc, char *argv[])
     std::cout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
     std::cout << "---------------------------------------------------------------------------- " << std::endl;
 
-    std::vector<float> x(11);
-    std::vector<double> ub(11), lb(11);
+    int num_vars = 11;
+
+    std::vector<float> x(num_vars);
+    std::vector<double> ub(num_vars), lb(num_vars);
     if (mode == "plot")
     {
-        std::vector<double> tp_mean(11);
-        std::vector<double> fp_mean(11);
-        std::vector<double> fn_mean(11);
-        std::vector<double> tn_mean(11);
-        std::vector<double> acc_mean(11);
-        std::vector<double> precision_mean(11);
-        std::vector<double> recall_mean(11);
-        std::vector<double> f1_mean(11);
-        std::vector<double> mcc_mean(11);
+        std::vector<double> tp_mean(num_vars);
+        std::vector<double> fp_mean(num_vars);
+        std::vector<double> fn_mean(num_vars);
+        std::vector<double> tn_mean(num_vars);
+        std::vector<double> acc_mean(num_vars);
+        std::vector<double> precision_mean(num_vars);
+        std::vector<double> recall_mean(num_vars);
+        std::vector<double> f1_mean(num_vars);
+        std::vector<double> mcc_mean(num_vars);
 
-        std::vector<double> tp_std(11);
-        std::vector<double> fp_std(11);
-        std::vector<double> fn_std(11);
-        std::vector<double> tn_std(11);
-        std::vector<double> acc_std(11);
-        std::vector<double> precision_std(11);
-        std::vector<double> recall_std(11);
-        std::vector<double> f1_std(11);
-        std::vector<double> mcc_std(11);
+        std::vector<double> tp_std(num_vars);
+        std::vector<double> fp_std(num_vars);
+        std::vector<double> fn_std(num_vars);
+        std::vector<double> tn_std(num_vars);
+        std::vector<double> acc_std(num_vars);
+        std::vector<double> precision_std(num_vars);
+        std::vector<double> recall_std(num_vars);
+        std::vector<double> f1_std(num_vars);
+        std::vector<double> mcc_std(num_vars);
 
         std::string variable = "n";
 
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             int var = 10 * i * i + 10;
             x[i] = var;
@@ -385,7 +387,7 @@ int main(int argc, char *argv[])
         plt.set_xlabel(("Class Strength (" + variable + ")").c_str());
 
         plt.createPlot(x, acc_mean, "Accuracy", "red", Plotter::CircleF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = acc_mean[i] + acc_std[i];
             lb[i] = acc_mean[i] - acc_std[i];
@@ -393,7 +395,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "red", 0.1);
 
         plt.addPlot(x, precision_mean, "Precision", "blue", Plotter::BoxF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = precision_mean[i] + precision_std[i];
             lb[i] = precision_mean[i] - precision_std[i];
@@ -401,7 +403,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "blue", 0.1);
 
         plt.addPlot(x, recall_mean, "Recall", "green", Plotter::TriDF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = recall_mean[i] + recall_std[i];
             lb[i] = recall_mean[i] - recall_std[i];
@@ -409,7 +411,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "green", 0.1);
 
         plt.addPlot(x, f1_mean, "F1 Score", "black", Plotter::TriUF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = f1_mean[i] + f1_std[i];
             lb[i] = f1_mean[i] - f1_std[i];
@@ -417,7 +419,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "black", 0.1);
 
         plt.addPlot(x, mcc_mean, "MCC", "brown", Plotter::DiaF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = mcc_mean[i] + mcc_std[i];
             lb[i] = mcc_mean[i] - mcc_std[i];
@@ -444,7 +446,7 @@ int main(int argc, char *argv[])
 
         variable = "p";
 
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             float var = 0.1 * i;
             x[i] = var;
@@ -479,7 +481,7 @@ int main(int argc, char *argv[])
         plt.set_xlabel(("Prob. to mark present student present (" + variable + ")").c_str());
 
         plt.createPlot(x, acc_mean, "Accuracy", "red", Plotter::CircleF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = acc_mean[i] + acc_std[i];
             lb[i] = acc_mean[i] - acc_std[i];
@@ -487,7 +489,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "red", 0.1);
 
         plt.addPlot(x, precision_mean, "Precision", "blue", Plotter::BoxF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = precision_mean[i] + precision_std[i];
             lb[i] = precision_mean[i] - precision_std[i];
@@ -495,7 +497,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "blue", 0.1);
 
         plt.addPlot(x, recall_mean, "Recall", "green", Plotter::TriDF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = recall_mean[i] + recall_std[i];
             lb[i] = recall_mean[i] - recall_std[i];
@@ -503,7 +505,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "green", 0.1);
 
         plt.addPlot(x, f1_mean, "F1 Score", "black", Plotter::TriUF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = f1_mean[i] + f1_std[i];
             lb[i] = f1_mean[i] - f1_std[i];
@@ -511,7 +513,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "black", 0.1);
 
         plt.addPlot(x, mcc_mean, "MCC", "brown", Plotter::DiaF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = mcc_mean[i] + mcc_std[i];
             lb[i] = mcc_mean[i] - mcc_std[i];
@@ -538,7 +540,7 @@ int main(int argc, char *argv[])
 
         variable = "q";
 
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             float var = 0.1 * i;
             x[i] = var;
@@ -573,7 +575,7 @@ int main(int argc, char *argv[])
         plt.set_xlabel(("Prob. to mark absent student present (" + variable + ")").c_str());
 
         plt.createPlot(x, acc_mean, "Accuracy", "red", Plotter::CircleF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = acc_mean[i] + acc_std[i];
             lb[i] = acc_mean[i] - acc_std[i];
@@ -581,7 +583,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "red", 0.1);
 
         plt.addPlot(x, precision_mean, "Precision", "blue", Plotter::BoxF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = precision_mean[i] + precision_std[i];
             lb[i] = precision_mean[i] - precision_std[i];
@@ -589,7 +591,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "blue", 0.1);
 
         plt.addPlot(x, recall_mean, "Recall", "green", Plotter::TriDF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = recall_mean[i] + recall_std[i];
             lb[i] = recall_mean[i] - recall_std[i];
@@ -597,7 +599,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "green", 0.1);
 
         plt.addPlot(x, f1_mean, "F1 Score", "black", Plotter::TriUF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = f1_mean[i] + f1_std[i];
             lb[i] = f1_mean[i] - f1_std[i];
@@ -605,7 +607,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "black", 0.1);
 
         plt.addPlot(x, mcc_mean, "MCC", "brown", Plotter::DiaF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = mcc_mean[i] + mcc_std[i];
             lb[i] = mcc_mean[i] - mcc_std[i];
@@ -632,7 +634,7 @@ int main(int argc, char *argv[])
 
         variable = "r";
 
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             float var = 0.05 * (i + 2);
             x[i] = var;
@@ -668,7 +670,7 @@ int main(int argc, char *argv[])
         plt.set_xlabel(("Porb. that a student is present (" + variable + ")").c_str());
 
         plt.createPlot(x, acc_mean, "Accuracy", "red", Plotter::CircleF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = acc_mean[i] + acc_std[i];
             lb[i] = acc_mean[i] - acc_std[i];
@@ -676,7 +678,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "red", 0.1);
 
         plt.addPlot(x, precision_mean, "Precision", "blue", Plotter::BoxF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = precision_mean[i] + precision_std[i];
             lb[i] = precision_mean[i] - precision_std[i];
@@ -684,7 +686,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "blue", 0.1);
 
         plt.addPlot(x, recall_mean, "Recall", "green", Plotter::TriDF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = recall_mean[i] + recall_std[i];
             lb[i] = recall_mean[i] - recall_std[i];
@@ -692,7 +694,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "green", 0.1);
 
         plt.addPlot(x, f1_mean, "F1 Score", "black", Plotter::TriUF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = f1_mean[i] + f1_std[i];
             lb[i] = f1_mean[i] - f1_std[i];
@@ -700,7 +702,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "black", 0.1);
 
         plt.addPlot(x, mcc_mean, "MCC", "brown", Plotter::DiaF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = mcc_mean[i] + mcc_std[i];
             lb[i] = mcc_mean[i] - mcc_std[i];
@@ -727,7 +729,7 @@ int main(int argc, char *argv[])
 
         variable = "m";
 
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             float var = n / (i + 2);
             if (i > 0 && var >= x[i - 1] * n - 1)
@@ -766,7 +768,7 @@ int main(int argc, char *argv[])
         plt.set_xlabel(("Fraction of Students to roll call (" + variable + ")").c_str());
 
         plt.createPlot(x, acc_mean, "Accuracy", "red", Plotter::CircleF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = acc_mean[i] + acc_std[i];
             lb[i] = acc_mean[i] - acc_std[i];
@@ -774,7 +776,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "red", 0.1);
 
         plt.addPlot(x, precision_mean, "Precision", "blue", Plotter::BoxF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = precision_mean[i] + precision_std[i];
             lb[i] = precision_mean[i] - precision_std[i];
@@ -782,7 +784,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "blue", 0.1);
 
         plt.addPlot(x, recall_mean, "Recall", "green", Plotter::TriDF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = recall_mean[i] + recall_std[i];
             lb[i] = recall_mean[i] - recall_std[i];
@@ -790,7 +792,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "green", 0.1);
 
         plt.addPlot(x, f1_mean, "F1 Score", "black", Plotter::TriUF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = f1_mean[i] + f1_std[i];
             lb[i] = f1_mean[i] - f1_std[i];
@@ -798,7 +800,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "black", 0.1);
 
         plt.addPlot(x, mcc_mean, "MCC", "brown", Plotter::DiaF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = mcc_mean[i] + mcc_std[i];
             lb[i] = mcc_mean[i] - mcc_std[i];
@@ -825,7 +827,7 @@ int main(int argc, char *argv[])
 
         variable = "k";
 
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             float var = 2 * a * n / (i + 2);
             if (i > 0 && var >= x[i - 1] * n - 1)
@@ -864,7 +866,7 @@ int main(int argc, char *argv[])
         plt.set_xlabel(("Min. Number of Votes (frac. of n) required to be present (" + variable + ")").c_str());
 
         plt.createPlot(x, acc_mean, "Accuracy", "red", Plotter::CircleF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = acc_mean[i] + acc_std[i];
             lb[i] = acc_mean[i] - acc_std[i];
@@ -872,7 +874,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "red", 0.1);
 
         plt.addPlot(x, precision_mean, "Precision", "blue", Plotter::BoxF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = precision_mean[i] + precision_std[i];
             lb[i] = precision_mean[i] - precision_std[i];
@@ -880,7 +882,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "blue", 0.1);
 
         plt.addPlot(x, recall_mean, "Recall", "green", Plotter::TriDF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = recall_mean[i] + recall_std[i];
             lb[i] = recall_mean[i] - recall_std[i];
@@ -888,7 +890,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "green", 0.1);
 
         plt.addPlot(x, f1_mean, "F1 Score", "black", Plotter::TriUF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = f1_mean[i] + f1_std[i];
             lb[i] = f1_mean[i] - f1_std[i];
@@ -896,7 +898,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "black", 0.1);
 
         plt.addPlot(x, mcc_mean, "MCC", "brown", Plotter::DiaF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = mcc_mean[i] + mcc_std[i];
             lb[i] = mcc_mean[i] - mcc_std[i];
@@ -923,7 +925,7 @@ int main(int argc, char *argv[])
 
         variable = "b";
 
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             float var = 2 * a * n / (i + 2);
             if (i > 0 && var >= x[i - 1] * n - 1)
@@ -962,7 +964,7 @@ int main(int argc, char *argv[])
         plt.set_xlabel(("Penalty (frac. of n) for voting an absent student (" + variable + ")").c_str());
 
         plt.createPlot(x, acc_mean, "Accuracy", "red", Plotter::CircleF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = acc_mean[i] + acc_std[i];
             lb[i] = acc_mean[i] - acc_std[i];
@@ -970,7 +972,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "red", 0.1);
 
         plt.addPlot(x, precision_mean, "Precision", "blue", Plotter::BoxF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = precision_mean[i] + precision_std[i];
             lb[i] = precision_mean[i] - precision_std[i];
@@ -978,7 +980,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "blue", 0.1);
 
         plt.addPlot(x, recall_mean, "Recall", "green", Plotter::TriDF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = recall_mean[i] + recall_std[i];
             lb[i] = recall_mean[i] - recall_std[i];
@@ -986,7 +988,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "green", 0.1);
 
         plt.addPlot(x, f1_mean, "F1 Score", "black", Plotter::TriUF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = f1_mean[i] + f1_std[i];
             lb[i] = f1_mean[i] - f1_std[i];
@@ -994,7 +996,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "black", 0.1);
 
         plt.addPlot(x, mcc_mean, "MCC", "brown", Plotter::DiaF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = mcc_mean[i] + mcc_std[i];
             lb[i] = mcc_mean[i] - mcc_std[i];
@@ -1021,7 +1023,7 @@ int main(int argc, char *argv[])
 
         variable = "a";
 
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             float var = n / (i + 2) + k;
             if (i > 0 && var >= x[i - 1] * n - 1)
@@ -1060,7 +1062,7 @@ int main(int argc, char *argv[])
         plt.set_xlabel(("Max. Fraction of Students to ask for vote (" + variable + ")").c_str());
 
         plt.createPlot(x, acc_mean, "Accuracy", "red", Plotter::CircleF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = acc_mean[i] + acc_std[i];
             lb[i] = acc_mean[i] - acc_std[i];
@@ -1068,7 +1070,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "red", 0.1);
 
         plt.addPlot(x, precision_mean, "Precision", "blue", Plotter::BoxF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = precision_mean[i] + precision_std[i];
             lb[i] = precision_mean[i] - precision_std[i];
@@ -1076,7 +1078,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "blue", 0.1);
 
         plt.addPlot(x, recall_mean, "Recall", "green", Plotter::TriDF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = recall_mean[i] + recall_std[i];
             lb[i] = recall_mean[i] - recall_std[i];
@@ -1084,7 +1086,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "green", 0.1);
 
         plt.addPlot(x, f1_mean, "F1 Score", "black", Plotter::TriUF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = f1_mean[i] + f1_std[i];
             lb[i] = f1_mean[i] - f1_std[i];
@@ -1092,7 +1094,7 @@ int main(int argc, char *argv[])
         plt.fillBetween(x, ub, lb, "black", 0.1);
 
         plt.addPlot(x, mcc_mean, "MCC", "brown", Plotter::DiaF, 1.0, 3.0);
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             ub[i] = mcc_mean[i] + mcc_std[i];
             lb[i] = mcc_mean[i] - mcc_std[i];
@@ -1117,43 +1119,47 @@ int main(int argc, char *argv[])
     }
     else
     {
-        std::vector<std::vector<double>> tp_mean(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> fp_mean(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> fn_mean(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> tn_mean(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> acc_mean(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> precision_mean(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> recall_mean(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> f1_mean(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> mcc_mean(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> tp_mean(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> fp_mean(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> fn_mean(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> tn_mean(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> acc_mean(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> precision_mean(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> recall_mean(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> f1_mean(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> mcc_mean(5, std::vector<double>(num_vars, 0));
 
-        std::vector<std::vector<double>> tp_std(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> fp_std(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> fn_std(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> tn_std(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> acc_std(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> precision_std(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> recall_std(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> f1_std(5, std::vector<double>(11, 0));
-        std::vector<std::vector<double>> mcc_std(5, std::vector<double>(11, 0));
+        std::vector<std::vector<double>> tp_std(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> fp_std(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> fn_std(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> tn_std(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> acc_std(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> precision_std(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> recall_std(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> f1_std(5, std::vector<double>(num_vars, 0));
+        std::vector<std::vector<double>> mcc_std(5, std::vector<double>(num_vars, 0));
 
-        std::vector<std::vector<int>> best_a(5, std::vector<int>(11));
-        std::vector<std::vector<int>> best_k(5, std::vector<int>(11));
-        std::vector<std::vector<int>> best_m(5, std::vector<int>(11));
-        std::vector<std::vector<int>> best_b(5, std::vector<int>(11));
+        std::vector<std::vector<int>> best_a(5, std::vector<int>(num_vars));
+        std::vector<std::vector<int>> best_k(5, std::vector<int>(num_vars));
+        std::vector<std::vector<int>> best_m(5, std::vector<int>(num_vars));
+        std::vector<std::vector<int>> best_b(5, std::vector<int>(num_vars));
 
         std::string variable = "n";
 
         int cnt = 0;
 
-        for (int i = 0; i < 11; i++)
+        for (int i = 0; i < num_vars; i++)
         {
             int n = 10 * i * i + 10;
             x[i] = n;
 
             std::vector<std::vector<int>> controls;
 
-            float a = 0.25;
+            double log_n = std::log(n);
+            float a = 20.0 / (log_n * log_n * log_n);
+            if (a > 0.9)
+                a = 0.9;
+            // float a = 2.0 / std::log(n);
             for (float m = 0.02; m < 0.11; m += 0.02)
                 for (float k = 0.1 * a; k < a * 0.9; k += 0.09 * a)
                     for (float b = 0.1 * a; b < a * 0.9; b += 0.09 * a)
@@ -1308,7 +1314,7 @@ int main(int argc, char *argv[])
 
         Plotter plt(1200, 900, 30);
         plt.set_legend("bottom right");
-        // plt.set_logscale_x();
+        plt.set_logscale_x();
         plt.set_xlim(x[0], x.back());
         plt.set_ylim(0, 1);
         plt.set_xlabel(("Class Strength (" + variable + ")").c_str());
@@ -1327,6 +1333,7 @@ int main(int argc, char *argv[])
         for (int j = 0; j < 5; j++)
         {
             plt.set_legend("bottom right");
+            plt.set_logscale_x();
             plt.set_ylim(0, 1);
             if (j == 0)
             {
@@ -1360,7 +1367,7 @@ int main(int argc, char *argv[])
             }
 
             plt.createPlot(x, acc_mean[j], "Accuracy", "red", Plotter::CircleF, 1.0, 3.0);
-            for (int i = 0; i < 11; i++)
+            for (int i = 0; i < num_vars; i++)
             {
                 ub[i] = acc_mean[j][i] + acc_std[j][i];
                 lb[i] = acc_mean[j][i] - acc_std[j][i];
@@ -1368,7 +1375,7 @@ int main(int argc, char *argv[])
             plt.fillBetween(x, ub, lb, "red", 0.1);
 
             plt.addPlot(x, precision_mean[j], "Precision", "blue", Plotter::BoxF, 1.0, 3.0);
-            for (int i = 0; i < 11; i++)
+            for (int i = 0; i < num_vars; i++)
             {
                 ub[i] = precision_mean[j][i] + precision_std[j][i];
                 lb[i] = precision_mean[j][i] - precision_std[j][i];
@@ -1376,7 +1383,7 @@ int main(int argc, char *argv[])
             plt.fillBetween(x, ub, lb, "blue", 0.1);
 
             plt.addPlot(x, recall_mean[j], "Recall", "green", Plotter::TriDF, 1.0, 3.0);
-            for (int i = 0; i < 11; i++)
+            for (int i = 0; i < num_vars; i++)
             {
                 ub[i] = recall_mean[j][i] + recall_std[j][i];
                 lb[i] = recall_mean[j][i] - recall_std[j][i];
@@ -1384,7 +1391,7 @@ int main(int argc, char *argv[])
             plt.fillBetween(x, ub, lb, "green", 0.1);
 
             plt.addPlot(x, f1_mean[j], "F1 Score", "black", Plotter::TriUF, 1.0, 3.0);
-            for (int i = 0; i < 11; i++)
+            for (int i = 0; i < num_vars; i++)
             {
                 ub[i] = f1_mean[j][i] + f1_std[j][i];
                 lb[i] = f1_mean[j][i] - f1_std[j][i];
@@ -1392,7 +1399,7 @@ int main(int argc, char *argv[])
             plt.fillBetween(x, ub, lb, "black", 0.1);
 
             plt.addPlot(x, mcc_mean[j], "MCC", "brown", Plotter::DiaF, 1.0, 3.0);
-            for (int i = 0; i < 11; i++)
+            for (int i = 0; i < num_vars; i++)
             {
                 ub[i] = mcc_mean[j][i] + mcc_std[j][i];
                 lb[i] = mcc_mean[j][i] - mcc_std[j][i];
@@ -1403,6 +1410,7 @@ int main(int argc, char *argv[])
 
             // ************************************************ //
 
+            plt.unset_logscale_x();
             plt.set_legend("top left");
             int max_a = best_a[j][0];
             for (int aBest : best_a[j])
