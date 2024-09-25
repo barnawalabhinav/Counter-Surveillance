@@ -47,3 +47,47 @@ b varies as (0.00786551 * n) when optimizing for Precision
 b varies as (0.00708815 * n) when optimizing for Recall
 b varies as (0.00716474 * n) when optimizing for F1-Score
 b varies as (0.00714176 * n) when optimizing for MCC
+
+****************************************************************
+************************* a = 5*log(n) *************************
+****************************************************************
+
+***************************
+p = 0.75, q = 0.25, r = 0.3
+***************************
+
+m varies as (0.0196944 * n) when optimizing for Accuracy
+m varies as (0.0196944 * n) when optimizing for Precision
+m varies as (0.0196906 * n) when optimizing for Recall
+m varies as (0.0197097 * n) when optimizing for F1-Score
+m varies as (0.0197059 * n) when optimizing for MCC
+k varies as (0.531592 * a) when optimizing for Accuracy
+k varies as (0.677553 * a) when optimizing for Precision
+k varies as (0.0950508 * a) when optimizing for Recall
+k varies as (0.52933 * a) when optimizing for F1-Score
+k varies as (0.531592 * a) when optimizing for MCC
+b varies as (0.114056 * a) when optimizing for Accuracy
+b varies as (0.191684 * a) when optimizing for Precision
+b varies as (0.0950508 * a) when optimizing for Recall
+b varies as (0.0963447 * a) when optimizing for F1-Score
+b varies as (0.0986057 * a) when optimizing for MCC
+
+***************************
+p = 0.75, q = 0.25, r = 0.7
+***************************
+
+m varies as (0.0197672 * n) when optimizing for Accuracy
+m varies as (0.0196906 * n) when optimizing for Precision
+m varies as (0.0196906 * n) when optimizing for Recall
+m varies as (0.0197633 * n) when optimizing for F1-Score
+m varies as (0.0197519 * n) when optimizing for MCC
+k varies as (0.472931 * a) when optimizing for Accuracy
+k varies as (0.649165 * a) when optimizing for Precision
+k varies as (0.0952142 * a) when optimizing for Recall
+k varies as (0.472931 * a) when optimizing for F1-Score
+k varies as (0.474815 * a) when optimizing for MCC
+b varies as (0.0952142 * a) when optimizing for Accuracy
+b varies as (0.212285 * a) when optimizing for Precision
+b varies as (0.0952142 * a) when optimizing for Recall
+b varies as (0.0974752 * a) when optimizing for F1-Score
+b varies as (0.112172 * a) when optimizing for MCC
