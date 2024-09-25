@@ -103,7 +103,6 @@ inline Stats simulate(int n, float m, float k, float a, float p, float q, float 
     {
         if (marked_status[i])
             continue;
-        // std::cout << "Student " << i << " : " << voters[i].size() << std::endl;
         if (voters[i].size() >= attendance_criteria[i])
             marked_present[i] = true;
         else
@@ -355,7 +354,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        Plotter plt;
+        Plotter plt(1200, 900, 30);
         plt.set_legend("bottom");
         // plt.set_logscale_x();
         plt.set_xlim(x[0], x.back());
@@ -450,7 +449,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        plt.reset();
+        plt.reset(1200, 900, 30);
         plt.set_legend("bottom");
         plt.set_xlim(0, 1);
         plt.set_ylim(-1, 1);
@@ -544,7 +543,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        plt.reset();
+        plt.reset(1200, 900, 30);
         plt.set_legend("bottom left");
         plt.set_xlim(0, 1);
         plt.set_ylim(-1, 1);
@@ -638,7 +637,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        plt.reset();
+        plt.reset(1200, 900, 30);
         plt.set_legend("bottom");
         // plt.set_logscale_x();
         plt.set_xlim(x[0], x.back());
@@ -736,7 +735,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        plt.reset();
+        plt.reset(1200, 900, 30);
         plt.set_legend("bottom");
         // plt.set_logscale_x();
         plt.set_xlim(x.back(), x[0]);
@@ -834,7 +833,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        plt.reset();
+        plt.reset(1200, 900, 30);
         plt.set_legend("bottom left");
         // plt.set_logscale_x();
         plt.set_xlim(x.back(), x[0]);
@@ -932,7 +931,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        plt.reset();
+        plt.reset(1200, 900, 30);
         plt.set_legend("bottom");
         // plt.set_logscale_x();
         plt.set_xlim(x.back(), x[0]);
@@ -1030,7 +1029,7 @@ int main(int argc, char *argv[])
             mcc_std[i] = result.second.mcc;
         }
 
-        plt.reset();
+        plt.reset(1200, 900, 30);
         plt.set_legend("bottom");
         // plt.set_logscale_x();
         plt.set_xlim(x.back(), x[0]);
@@ -1131,45 +1130,33 @@ int main(int argc, char *argv[])
             int n = 10 * i * i + 10;
             x[i] = n;
 
-            std::vector<std::vector<float>> controls;
-            // for (float a = 0.09; a < 1.0; a += 0.09)
-            //     for (float m = 0.045; m < 0.5; m += 0.045)
-            //         for (float k = 0.09 * a; k < a; k += 0.09 * a)
-            //             for (float b = 0.09 * a; b < a; b += 0.09 * a)
-            //                 controls.push_back({a, m, k, b});
+            std::vector<std::vector<int>> controls;
 
-            for (float a = 0.1; a < 0.9; a += 0.09)
-                for (float m = 0.1; m < 0.5; m += 0.045)
-                    for (float k = 0.1 * a; k < a*0.9; k += 0.09 * a)
-                        for (float b = 0.1 * a*0.9; b < a; b += 0.09 * a)
-                            controls.push_back({a, m, k, b});
-
-            // for (float a = 0.1; a < 0.9; a += 0.3)
-            //     for (float m = 0.1; m < 0.5; m += 0.15)
-            //         for (float k = 0.1 * a; k < a*0.9; k += 0.3 * a)
-            //             for (float b = 0.1 * a*0.9; b < a; b += 0.3 * a)
-            //                 controls.push_back({a, m, k, b});
-
-            // for (float a = 0.1; a < 0.9; a += 0.7)
-            //     for (float m = 0.1; m < 0.5; m += 0.35)
-            //         for (float k = 0.1 * a; k < a * 0.9; k += 0.7 * a)
-            //             for (float b = 0.1 * a * 0.9; b < a; b += 0.7 * a)
-            //                 controls.push_back({a, m, k, b});
+            float a = 0.25;
+            for (float m = 0.02; m < 0.11; m += 0.02)
+                for (float k = 0.1 * a; k < a * 0.9; k += 0.09 * a)
+                    for (float b = 0.1 * a; b < a * 0.9; b += 0.09 * a)
+                    {
+                        controls.push_back({static_cast<int>(std::round(a * n)),
+                                            static_cast<int>(std::round(m * n)),
+                                            static_cast<int>(std::round(k * n)),
+                                            static_cast<int>(std::round(b * n))});
+                    }
 
             std::vector<std::vector<std::pair<Stats, Stats>>> best_result(threads, std::vector<std::pair<Stats, Stats>>(5, {Stats(), Stats()}));
-            std::vector<std::vector<std::vector<float>>> best_control(threads, std::vector<std::vector<float>>(5));
+            std::vector<std::vector<std::vector<int>>> best_control(threads, std::vector<std::vector<int>>(5));
 
 #pragma omp parallel for num_threads(threads)
-            for (std::vector<float> v : controls)
+            for (std::vector<int> v : controls)
             {
                 cnt++;
                 int t = omp_get_thread_num();
                 // std::cout << "Thread " << t << " : " << i << ", " << cnt << std::endl;
 
-                a = v[0];
-                m = v[1];
-                k = v[2];
-                b = v[3];
+                a = ((float) v[0]) / ((float) n);
+                m = ((float) v[1]) / ((float) n);
+                k = ((float) v[2]) / ((float) n);
+                b = ((float) v[3]) / ((float) n);
                 std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, b);
                 if (result.first.accuracy > best_result[t][0].first.accuracy)
                 {
@@ -1298,8 +1285,8 @@ int main(int argc, char *argv[])
             }
         }
 
-        Plotter plt;
-        plt.set_legend("bottom");
+        Plotter plt(1200, 900, 30);
+        plt.set_legend("bottom right");
         // plt.set_logscale_x();
         plt.set_xlim(x[0], x.back());
         plt.set_ylim(0, 1);
@@ -1318,34 +1305,36 @@ int main(int argc, char *argv[])
         std::string r_str = stream.str();
         for (int j = 0; j < 5; j++)
         {
+            plt.set_legend("bottom right");
+            plt.set_ylim(0, 1);
             if (j == 0)
             {
                 plt.set_title("Model Performance when maximizing \"Accuracy\"");
-                plt.set_savePath("plots/acc_metric.png");
+                plt.set_savePath(("plots/acc_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
                 fout = std::ofstream("plots/desc/accuracy_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
             else if (j == 1)
             {
                 plt.set_title("Model Performance when maximizing \"Precision\"");
-                plt.set_savePath("plots/prec_metric.png");
+                plt.set_savePath(("plots/prec_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
                 fout = std::ofstream("plots/desc/precision_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
             else if (j == 2)
             {
                 plt.set_title("Model Performance when maximizing \"Recall\"");
-                plt.set_savePath("plots/rec_metric.png");
+                plt.set_savePath(("plots/rec_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
                 fout = std::ofstream("plots/desc/recall_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
             else if (j == 3)
             {
                 plt.set_title("Model Performance when maximizing \"F1-Score\"");
-                plt.set_savePath("plots/f1_metric.png");
+                plt.set_savePath(("plots/f1_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
                 fout = std::ofstream("plots/desc/f1-score_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
             else
             {
                 plt.set_title("Model Performance when maximizing \"MCC\"");
-                plt.set_savePath("plots/mcc_metric.png");
+                plt.set_savePath(("plots/mcc_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
                 fout = std::ofstream("plots/desc/mcc_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
 
@@ -1393,30 +1382,35 @@ int main(int argc, char *argv[])
 
             // ************************************************ //
 
+            plt.set_legend("top left");
+            int max_a = best_a[j][0];
+            for (int aBest : best_a[j])
+                max_a = std::max(max_a, aBest);
+            plt.set_ylim(0, max_a + 10);
             if (j == 0)
             {
                 plt.set_title("Best Control Variables when maximizing \"Accuracy\"");
-                plt.set_savePath("plots/acc_control.png");
+                plt.set_savePath(("plots/acc_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
             }
             else if (j == 1)
             {
                 plt.set_title("Best Control Variables when maximizing \"Precision\"");
-                plt.set_savePath("plots/prec_control.png");
+                plt.set_savePath(("plots/prec_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
             }
             else if (j == 2)
             {
                 plt.set_title("Best Control Variables when maximizing \"Recall\"");
-                plt.set_savePath("plots/rec_control.png");
+                plt.set_savePath(("plots/rec_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
             }
             else if (j == 3)
             {
                 plt.set_title("Best Control Variables when maximizing \"F1-Score\"");
-                plt.set_savePath("plots/f1_control.png");
+                plt.set_savePath(("plots/f1_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
             }
             else
             {
                 plt.set_title("Best Control Variables when maximizing \"MCC\"");
-                plt.set_savePath("plots/mcc_control.png");
+                plt.set_savePath(("plots/mcc_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
             }
 
             plt.createPlot(x, best_a[j], "a", "red", Plotter::CircleF, 1.0, 3.0);
@@ -1425,29 +1419,11 @@ int main(int argc, char *argv[])
             plt.addPlot(x, best_k[j], "k", "black", Plotter::TriUF, 1.0, 3.0);
             plt.plot();
 
-            fout << "best a:";
-            for (float a : best_a[j])
-                fout << " " << a;
-            fout << std::endl;
-            fout << "best m:";
-            for (float m : best_m[j])
-                fout << " " << m;
-            fout << std::endl;
-            fout << "best k:";
-            for (float k : best_k[j])
-                fout << " " << k;
-            fout << std::endl;
-            fout << "best b:";
-            for (float b : best_b[j])
-                fout << " " << b;
-            fout << std::endl;
+            fout << "n,a,m,k,b" << std::endl;
+            for (int i = 0; i < x.size(); i++)
+                fout << x[i] << "," << best_a[j][i] << "," << best_m[j][i] << "," << best_k[j][i] << "," << best_b[j][i] << std::endl;
         }
     }
-
-    // std::cout << "############################ SIMULATION RESULTS ############################" << std::endl;
-    // std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, b, threads);
-    // std::cout << result << std::endl;
-    // std::cout << "############################################################################ " << std::endl;
 
     return 0;
 }
