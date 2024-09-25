@@ -25,13 +25,8 @@
 * @param seed: Random Number Generator Seed
 * @param b: b for voting for absent student
 */
-inline Stats simulate(int n, float m, float k, float a, float p, float q, float r, int seed = -1, float b = 0.05, bool printVoteCount = false)
+inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 0.05, bool printVoteCount = false)
 {
-    m = std::round(n * m);
-    a = std::round(n * a);
-    k = std::round(n * k);
-    b = std::round(n * b);
-
     std::bernoulli_distribution vote_present_dist(p);
     std::bernoulli_distribution vote_absent_dist(q);
     std::bernoulli_distribution is_present_dist(r);
@@ -131,7 +126,7 @@ inline Stats simulate(int n, float m, float k, float a, float p, float q, float 
     return stats;
 }
 
-inline std::pair<Stats, Stats> experiment(int n, float m, float k, float a, float p, float q, float r, int seed = -1, float b = 0.05)
+inline std::pair<Stats, Stats> experiment(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 0.05)
 {
     // Stats res = simulate(n, m, k, a, p, q, r, seed, b, true);
 
@@ -153,7 +148,7 @@ inline std::pair<Stats, Stats> experiment(int n, float m, float k, float a, floa
 
 // Function to compute the least squares coefficient for a given variable
 template <typename T1, typename T2>
-inline void fitLinear(const std::vector<T1> &x, std::vector<std::vector<T2>> &y, std::string var_name)
+inline void fitLinear(const std::vector<T1> &x, std::vector<std::vector<T2>> &y, std::string x_var_name, std::string y_var_name)
 {
     std::string metric[5] = {"Accuracy", "Precision", "Recall", "F1-Score", "MCC"};
 
@@ -168,7 +163,28 @@ inline void fitLinear(const std::vector<T1> &x, std::vector<std::vector<T2>> &y,
             sum_xy += x[j] * y[i][j];
         }
         double c = sum_xy / sum_x2;
-        std::cout << var_name << " varies as (" << c << " * n) when optimizing for " << metric[i] << std::endl;
+        std::cout << y_var_name << " varies as (" << c << " * " << x_var_name << ") when optimizing for " << metric[i] << std::endl;
+    }
+}
+
+// Function to compute the least squares coefficient for a given variable
+template <typename T1, typename T2>
+inline void fitLinear(const std::vector<std::vector<T1>> &x, std::vector<std::vector<T2>> &y, std::string x_var_name, std::string y_var_name)
+{
+    std::string metric[5] = {"Accuracy", "Precision", "Recall", "F1-Score", "MCC"};
+
+    for (int i = 0; i < y.size(); i++)
+    {
+        double sum_x = 0.0, sum_x2 = 0.0, sum_y = 0.0, sum_xy = 0.0;
+        for (int j = 0; j < y[i].size(); j++)
+        {
+            sum_x += x[i][j];
+            sum_x2 += x[i][j] * x[i][j];
+            sum_y += y[i][j];
+            sum_xy += x[i][j] * y[i][j];
+        }
+        double c = sum_xy / sum_x2;
+        std::cout << y_var_name << " varies as (" << c << " * " << x_var_name << ") when optimizing for " << metric[i] << std::endl;
     }
 }
 
@@ -1156,18 +1172,20 @@ int main(int argc, char *argv[])
             std::vector<std::vector<int>> controls;
 
             double log_n = std::log(n);
-            float a = 20.0 / (log_n * log_n * log_n);
-            if (a > 0.9)
-                a = 0.9;
+            // float a = 20.0 / (log_n * log_n * log_n);
+            // float a = (log_n * log_n) / (float)n;
             // float a = 2.0 / std::log(n);
+            float a = 5.0 * log_n;
+            if (a > 0.9 * n)
+                a = 0.9 * n;
             for (float m = 0.02; m < 0.11; m += 0.02)
-                for (float k = 0.1 * a; k < a * 0.9; k += 0.09 * a)
-                    for (float b = 0.1 * a; b < a * 0.9; b += 0.09 * a)
+                for (float k = 0.1; k < 0.9; k += 0.09)
+                    for (float b = 0.1; b < 0.9; b += 0.09)
                     {
-                        controls.push_back({static_cast<int>(std::round(a * n)),
+                        controls.push_back({static_cast<int>(std::round(a)),
                                             static_cast<int>(std::round(m * n)),
-                                            static_cast<int>(std::round(k * n)),
-                                            static_cast<int>(std::round(b * n))});
+                                            static_cast<int>(std::round(k * a)),
+                                            static_cast<int>(std::round(b * a))});
                     }
 
             std::vector<std::vector<std::pair<Stats, Stats>>> best_result(threads, std::vector<std::pair<Stats, Stats>>(5, {Stats(), Stats()}));
@@ -1180,10 +1198,10 @@ int main(int argc, char *argv[])
                 int t = omp_get_thread_num();
                 // std::cout << "Thread " << t << " : " << i << ", " << cnt << std::endl;
 
-                a = ((float)v[0]) / ((float)n);
-                m = ((float)v[1]) / ((float)n);
-                k = ((float)v[2]) / ((float)n);
-                b = ((float)v[3]) / ((float)n);
+                a = v[0];
+                m = v[1];
+                k = v[2];
+                b = v[3];
                 std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, b);
                 if (result.first.accuracy > best_result[t][0].first.accuracy)
                 {
@@ -1453,10 +1471,10 @@ int main(int argc, char *argv[])
                 fout << x[i] << "," << best_a[j][i] << "," << best_m[j][i] << "," << best_k[j][i] << "," << best_b[j][i] << std::endl;
         }
 
-        fitLinear(x, best_a, "a");
-        fitLinear(x, best_m, "m");
-        fitLinear(x, best_k, "k");
-        fitLinear(x, best_b, "b");
+        // fitLinear(x, best_a, "a");
+        fitLinear(x, best_m, "n", "m");
+        fitLinear(best_a, best_k, "a", "k");
+        fitLinear(best_a, best_b, "a", "b");
     }
 
     return 0;
