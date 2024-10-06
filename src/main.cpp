@@ -25,7 +25,7 @@
 * @param seed: Random Number Generator Seed
 * @param b: b for voting for absent student
 */
-inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 0.05, bool printVoteCount = false)
+inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 0.05, float d = 0.0, bool printVoteCount = false)
 {
     std::bernoulli_distribution vote_present_dist(p);
     std::bernoulli_distribution vote_absent_dist(q);
@@ -36,6 +36,7 @@ inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int
     if (seed != -1)
         generator = std::mt19937(seed);
 
+    Stats stats;
     std::vector<bool> present_status(n);
     std::vector<std::vector<int>> voters(n, std::vector<int>());
     std::vector<int> students(n);
@@ -76,6 +77,19 @@ inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int
         }
     }
 
+    /* To ensure that the network configuration definitely contains significant defaulters */
+    int defaulters = 0;
+    for (int i = 0; i < n; i++)
+        if (!present_status[i] && voters[i].size() >= k)
+            defaulters++;
+
+    if (defaulters < d * n)
+    {
+        std::cout << (float)defaulters / n << std::endl;
+        return stats;
+    }
+    /****************************** Condition Check Finished ******************************/
+
     // Roll Call random students and check if they are present
     std::vector<int> attendance_criteria(n, k); // Effective k for each student separately
     std::vector<bool> marked_status(n), marked_present(n);
@@ -104,7 +118,6 @@ inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int
             marked_present[i] = false;
     }
 
-    Stats stats;
     stats.calc_stats(present_status, marked_present);
 
     if (printVoteCount)
@@ -126,15 +139,20 @@ inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int
     return stats;
 }
 
-inline std::pair<Stats, Stats> experiment(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 0.05)
+inline std::pair<Stats, Stats> experiment(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 0.05, float d = 0.0)
 {
-    // Stats res = simulate(n, m, k, a, p, q, r, seed, b, true);
+    // Stats res = simulate(n, m, k, a, p, q, r, seed, b, d, true);
 
     Stats mean, std;
     int num_sim = 0;
     for (int i = 0; i < 1000; i++)
     {
-        Stats result = simulate(n, m, k, a, p, q, r, seed, b);
+        // Stats result = simulate(n, m, k, a, p, q, r, seed, b, d);
+
+        Stats result;
+        while (result == 0)
+            result = simulate(n, m, k, a, p, q, r, seed, b, d);
+
         mean += result;
         std += result * result;
         num_sim++;
@@ -205,6 +223,7 @@ void display_help(const std::string &program_name)
               << "  --p <float>     Specify the Probability that a student is marked present if he/she is present\n"
               << "  --q <float>     Specify the Probability that a student is marked present if he/she is absent\n"
               << "  --r <float>     Specify the Probability that a student is present in the class\n"
+              << "  --d <float>     Specify the Minimum Fraction (of n) of Defaulters to ensure in each network\n"
               << std::endl;
 }
 
@@ -223,6 +242,7 @@ int main(int argc, char *argv[])
     float p = 0.75;            // Vote Present Prob
     float q = 0.25;            // Vote Absent Probt
     float r = 0.5;             // Present Prob
+    float d = 0;               // Minimum Defaulters
 
     for (int i = 1; i < argc; ++i)
     {
@@ -257,6 +277,8 @@ int main(int argc, char *argv[])
             q = std::stof(argv[++i]);
         else if (arg == "--r" && i + 1 < argc)
             r = std::stof(argv[++i]);
+        else if (arg == "--d" && i + 1 < argc)
+            d = std::stof(argv[++i]);
         else
         {
             std::cerr << "Error: Unknown option: " << arg << std::endl;
@@ -306,6 +328,11 @@ int main(int argc, char *argv[])
         std::cerr << "Error: Probability that a student is present in the class should be between 0 and 1" << std::endl;
         return 1;
     }
+    if (d < 0 || d > 1)
+    {
+        std::cerr << "Error: Probability that a student is present in the class should be between 0 and 1" << std::endl;
+        return 1;
+    }
     if (m > 1)
     {
         std::cerr << "Error: Number of students to pick for rollcall should be less than or equal to the number of students in the class" << std::endl;
@@ -336,6 +363,7 @@ int main(int argc, char *argv[])
     std::cout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
     std::cout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
     std::cout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+    std::cout << "Minimum Fraction of Defaulters to ensure in each network ----------- d: " << d << std::endl;
     std::cout << "---------------------------------------------------------------------------- " << std::endl;
 
     int num_vars = 11;
@@ -366,12 +394,17 @@ int main(int argc, char *argv[])
 
         std::string variable = "n";
 
+        m = std::round(n * m);
+        a = std::round(n * a);
+        k = std::round(n * k);
+        b = std::round(n * b);
+
         for (int i = 0; i < num_vars; i++)
         {
             int var = 10 * i * i + 10;
             x[i] = var;
-            std::pair<Stats, Stats> result = experiment(var, m, k, a, p, q, r, seed, b);
-            // std::pair<Stats, Stats> result = experiment(var, m, k/std::cbrt((float) var) , a, p, q, r, seed, b, threads);
+
+            std::pair<Stats, Stats> result = experiment(var, std::round(var * m / n), std::round(var * k / n), std::round(var * a / n), p, q, r, seed, std::round(var * b / n), d);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -398,7 +431,7 @@ int main(int argc, char *argv[])
         // plt.set_logscale_x();
         plt.set_xlim(x[0], x.back());
         plt.set_ylim(0, 1);
-        plt.set_savePath(("plots/" + variable + ".png").c_str());
+        plt.set_savePath(("plots_controlled/" + variable + ".png").c_str());
         plt.set_title(("Model Performance with varying \"" + variable + "\"").c_str());
         plt.set_xlabel(("Class Strength (" + variable + ")").c_str());
 
@@ -442,7 +475,7 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        std::ofstream fout("plots/desc/" + variable + ".txt");
+        std::ofstream fout("plots_controlled/desc/" + variable + ".txt");
         fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
         fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
         fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
@@ -455,6 +488,7 @@ int main(int argc, char *argv[])
         fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
         fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
         fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "Minimum Fraction of Defaulters to ensure in each network ----------- d: " << d << std::endl;
         fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
 
@@ -466,7 +500,8 @@ int main(int argc, char *argv[])
         {
             float var = 0.1 * i;
             x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, m, k, a, var, q, r, seed, b);
+
+            std::pair<Stats, Stats> result = experiment(n, m, k, a, var, q, r, seed, b, d);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -492,7 +527,7 @@ int main(int argc, char *argv[])
         plt.set_legend("bottom");
         plt.set_xlim(0, 1);
         plt.set_ylim(-1, 1);
-        plt.set_savePath(("plots/" + variable + ".png").c_str());
+        plt.set_savePath(("plots_controlled/" + variable + ".png").c_str());
         plt.set_title(("Model Performance with varying \"" + variable + "\"").c_str());
         plt.set_xlabel(("Prob. to mark present student present (" + variable + ")").c_str());
 
@@ -536,7 +571,7 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout = std::ofstream("plots_controlled/desc/" + variable + ".txt");
         fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
         fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
         fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
@@ -549,6 +584,7 @@ int main(int argc, char *argv[])
         fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
         fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
         fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "Minimum Fraction of Defaulters to ensure in each network ----------- d: " << d << std::endl;
         fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
 
@@ -560,7 +596,8 @@ int main(int argc, char *argv[])
         {
             float var = 0.1 * i;
             x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, m, k, a, p, var, r, seed, b);
+
+            std::pair<Stats, Stats> result = experiment(n, m, k, a, p, var, r, seed, b, d);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -586,7 +623,7 @@ int main(int argc, char *argv[])
         plt.set_legend("bottom left");
         plt.set_xlim(0, 1);
         plt.set_ylim(-1, 1);
-        plt.set_savePath(("plots/" + variable + ".png").c_str());
+        plt.set_savePath(("plots_controlled/" + variable + ".png").c_str());
         plt.set_title(("Model Performance with varying \"" + variable + "\"").c_str());
         plt.set_xlabel(("Prob. to mark absent student present (" + variable + ")").c_str());
 
@@ -630,7 +667,7 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout = std::ofstream("plots_controlled/desc/" + variable + ".txt");
         fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
         fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
         fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
@@ -643,6 +680,7 @@ int main(int argc, char *argv[])
         fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
         fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
         fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "Minimum Fraction of Defaulters to ensure in each network ----------- d: " << d << std::endl;
         fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
 
@@ -654,7 +692,8 @@ int main(int argc, char *argv[])
         {
             float var = 0.05 * (i + 2);
             x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, var, seed, b);
+
+            std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, var, seed, b, d);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -681,7 +720,7 @@ int main(int argc, char *argv[])
         // plt.set_logscale_x();
         plt.set_xlim(x[0], x.back());
         plt.set_ylim(0, 1);
-        plt.set_savePath(("plots/" + variable + ".png").c_str());
+        plt.set_savePath(("plots_controlled/" + variable + ".png").c_str());
         plt.set_title(("Model Performance with varying \"" + variable + "\"").c_str());
         plt.set_xlabel(("Porb. that a student is present (" + variable + ")").c_str());
 
@@ -725,7 +764,7 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout = std::ofstream("plots_controlled/desc/" + variable + ".txt");
         fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
         fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
         fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
@@ -738,6 +777,7 @@ int main(int argc, char *argv[])
         fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
         fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
         fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "Minimum Fraction of Defaulters to ensure in each network ----------- d: " << d << std::endl;
         fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
 
@@ -750,9 +790,9 @@ int main(int argc, char *argv[])
             float var = n / (i + 2);
             if (i > 0 && var >= x[i - 1] * n - 1)
                 var = x[i - 1] * n - 2;
-            var /= n;
-            x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, var, k, a, p, q, r, seed, b);
+            x[i] = var / n;
+
+            std::pair<Stats, Stats> result = experiment(n, var, k, a, p, q, r, seed, b, d);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -779,7 +819,7 @@ int main(int argc, char *argv[])
         // plt.set_logscale_x();
         plt.set_xlim(x.back(), x[0]);
         plt.set_ylim(0, 1);
-        plt.set_savePath(("plots/" + variable + ".png").c_str());
+        plt.set_savePath(("plots_controlled/" + variable + ".png").c_str());
         plt.set_title(("Model Performance with varying \"" + variable + "\"").c_str());
         plt.set_xlabel(("Fraction of Students to roll call (" + variable + ")").c_str());
 
@@ -823,7 +863,7 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout = std::ofstream("plots_controlled/desc/" + variable + ".txt");
         fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
         fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
         fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
@@ -836,6 +876,7 @@ int main(int argc, char *argv[])
         fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
         fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
         fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "Minimum Fraction of Defaulters to ensure in each network ----------- d: " << d << std::endl;
         fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
 
@@ -845,12 +886,12 @@ int main(int argc, char *argv[])
 
         for (int i = 0; i < num_vars; i++)
         {
-            float var = 2 * a * n / (i + 2);
+            float var = 2 * a / (i + 2);
             if (i > 0 && var >= x[i - 1] * n - 1)
                 var = x[i - 1] * n - 2;
-            var /= n;
-            x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, m, var, a, p, q, r, seed, b);
+            x[i] = var / n;
+
+            std::pair<Stats, Stats> result = experiment(n, m, var, a, p, q, r, seed, b, d);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -877,7 +918,7 @@ int main(int argc, char *argv[])
         // plt.set_logscale_x();
         plt.set_xlim(x.back(), x[0]);
         plt.set_ylim(0, 1);
-        plt.set_savePath(("plots/" + variable + ".png").c_str());
+        plt.set_savePath(("plots_controlled/" + variable + ".png").c_str());
         plt.set_title(("Model Performance with varying \"" + variable + "\"").c_str());
         plt.set_xlabel(("Min. Number of Votes (frac. of n) required to be present (" + variable + ")").c_str());
 
@@ -921,7 +962,7 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout = std::ofstream("plots_controlled/desc/" + variable + ".txt");
         fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
         fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
         fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
@@ -934,6 +975,7 @@ int main(int argc, char *argv[])
         fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
         fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
         fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "Minimum Fraction of Defaulters to ensure in each network ----------- d: " << d << std::endl;
         fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
 
@@ -943,12 +985,12 @@ int main(int argc, char *argv[])
 
         for (int i = 0; i < num_vars; i++)
         {
-            float var = 2 * a * n / (i + 2);
+            float var = 2 * a / (i + 2);
             if (i > 0 && var >= x[i - 1] * n - 1)
                 var = x[i - 1] * n - 2;
-            var /= n;
-            x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, var);
+            x[i] = var / n;
+
+            std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, var, d);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -975,7 +1017,7 @@ int main(int argc, char *argv[])
         // plt.set_logscale_x();
         plt.set_xlim(x.back(), x[0]);
         plt.set_ylim(0, 1);
-        plt.set_savePath(("plots/" + variable + ".png").c_str());
+        plt.set_savePath(("plots_controlled/" + variable + ".png").c_str());
         plt.set_title(("Model Performance with varying \"" + variable + "\"").c_str());
         plt.set_xlabel(("Penalty (frac. of n) for voting an absent student (" + variable + ")").c_str());
 
@@ -1019,7 +1061,7 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout = std::ofstream("plots_controlled/desc/" + variable + ".txt");
         fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
         fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
         fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
@@ -1032,6 +1074,7 @@ int main(int argc, char *argv[])
         fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
         fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
         fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "Minimum Fraction of Defaulters to ensure in each network ----------- d: " << d << std::endl;
         fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
 
@@ -1041,12 +1084,12 @@ int main(int argc, char *argv[])
 
         for (int i = 0; i < num_vars; i++)
         {
-            float var = n / (i + 2) + k;
+            float var = n / (i + 2) + k / n;
             if (i > 0 && var >= x[i - 1] * n - 1)
                 var = x[i - 1] * n - 2;
-            var /= n;
-            x[i] = var;
-            std::pair<Stats, Stats> result = experiment(n, m, k, var, p, q, r, seed, b);
+            x[i] = var / n;
+
+            std::pair<Stats, Stats> result = experiment(n, m, k, var, p, q, r, seed, b, d);
             tp_mean[i] = result.first.true_pos;
             fp_mean[i] = result.first.false_pos;
             fn_mean[i] = result.first.false_neg;
@@ -1073,7 +1116,7 @@ int main(int argc, char *argv[])
         // plt.set_logscale_x();
         plt.set_xlim(x.back(), x[0]);
         plt.set_ylim(0, 1);
-        plt.set_savePath(("plots/" + variable + ".png").c_str());
+        plt.set_savePath(("plots_controlled/" + variable + ".png").c_str());
         plt.set_title(("Model Performance with varying \"" + variable + "\"").c_str());
         plt.set_xlabel(("Max. Fraction of Students to ask for vote (" + variable + ")").c_str());
 
@@ -1117,7 +1160,7 @@ int main(int argc, char *argv[])
         }
         plt.fillBetween(x, ub, lb, "brown", 0.1);
 
-        fout = std::ofstream("plots/desc/" + variable + ".txt");
+        fout = std::ofstream("plots_controlled/desc/" + variable + ".txt");
         fout << "########################## EXPERIMENT PARAMETERS ########################### " << std::endl;
         fout << "Number of Threads -------------------------------------------- threads: " << threads << std::endl;
         fout << "Seed (Random Number Generator) ---------------------------------- seed: " << seed << std::endl;
@@ -1130,6 +1173,7 @@ int main(int argc, char *argv[])
         fout << "Probability that a student is marked present if he/she is present -- p: " << p << std::endl;
         fout << "Probability that a student is marked present if he/she is absent --- q: " << q << std::endl;
         fout << "Probability that a student is present in the class ----------------- r: " << r << std::endl;
+        fout << "Minimum Fraction of Defaulters to ensure in each network ----------- d: " << d << std::endl;
         fout << "---------------------------------------------------------------------------- " << std::endl;
         std::cout << "---------------------------------------------------------------------------- " << std::endl;
     }
@@ -1202,7 +1246,7 @@ int main(int argc, char *argv[])
                 m = v[1];
                 k = v[2];
                 b = v[3];
-                std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, b);
+                std::pair<Stats, Stats> result = experiment(n, m, k, a, p, q, r, seed, b, d);
                 if (result.first.accuracy > best_result[t][0].first.accuracy)
                 {
                     best_result[t][0] = result;
@@ -1356,32 +1400,32 @@ int main(int argc, char *argv[])
             if (j == 0)
             {
                 plt.set_title("Model Performance when maximizing \"Accuracy\"");
-                plt.set_savePath(("plots/acc_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
-                fout = std::ofstream("plots/desc/accuracy_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
+                plt.set_savePath(("plots_controlled/acc_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                fout = std::ofstream("plots_controlled/desc/accuracy_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
             else if (j == 1)
             {
                 plt.set_title("Model Performance when maximizing \"Precision\"");
-                plt.set_savePath(("plots/prec_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
-                fout = std::ofstream("plots/desc/precision_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
+                plt.set_savePath(("plots_controlled/prec_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                fout = std::ofstream("plots_controlled/desc/precision_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
             else if (j == 2)
             {
                 plt.set_title("Model Performance when maximizing \"Recall\"");
-                plt.set_savePath(("plots/rec_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
-                fout = std::ofstream("plots/desc/recall_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
+                plt.set_savePath(("plots_controlled/rec_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                fout = std::ofstream("plots_controlled/desc/recall_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
             else if (j == 3)
             {
                 plt.set_title("Model Performance when maximizing \"F1-Score\"");
-                plt.set_savePath(("plots/f1_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
-                fout = std::ofstream("plots/desc/f1-score_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
+                plt.set_savePath(("plots_controlled/f1_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                fout = std::ofstream("plots_controlled/desc/f1-score_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
             else
             {
                 plt.set_title("Model Performance when maximizing \"MCC\"");
-                plt.set_savePath(("plots/mcc_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
-                fout = std::ofstream("plots/desc/mcc_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
+                plt.set_savePath(("plots_controlled/mcc_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                fout = std::ofstream("plots_controlled/desc/mcc_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
             }
 
             plt.createPlot(x, acc_mean[j], "Accuracy", "red", Plotter::CircleF, 1.0, 3.0);
@@ -1437,27 +1481,27 @@ int main(int argc, char *argv[])
             if (j == 0)
             {
                 plt.set_title("Best Control Variables when maximizing \"Accuracy\"");
-                plt.set_savePath(("plots/acc_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                plt.set_savePath(("plots_controlled/acc_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
             }
             else if (j == 1)
             {
                 plt.set_title("Best Control Variables when maximizing \"Precision\"");
-                plt.set_savePath(("plots/prec_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                plt.set_savePath(("plots_controlled/prec_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
             }
             else if (j == 2)
             {
                 plt.set_title("Best Control Variables when maximizing \"Recall\"");
-                plt.set_savePath(("plots/rec_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                plt.set_savePath(("plots_controlled/rec_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
             }
             else if (j == 3)
             {
                 plt.set_title("Best Control Variables when maximizing \"F1-Score\"");
-                plt.set_savePath(("plots/f1_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                plt.set_savePath(("plots_controlled/f1_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
             }
             else
             {
                 plt.set_title("Best Control Variables when maximizing \"MCC\"");
-                plt.set_savePath(("plots/mcc_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                plt.set_savePath(("plots_controlled/mcc_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
             }
 
             plt.createPlot(x, best_a[j], "a", "red", Plotter::CircleF, 1.0, 3.0);

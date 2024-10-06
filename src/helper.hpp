@@ -98,6 +98,32 @@ struct Stats
         return *this;
     }
 
+    inline bool operator==(const Stats &other) const
+    {
+        return this->true_pos == other.true_pos
+            && this->true_neg == other.true_neg
+            && this->false_pos == other.false_pos
+            && this->false_neg == other.false_neg
+            && this->accuracy == other.accuracy
+            && this->precision == other.precision
+            && this->recall == other.recall
+            && this->f1_score == other.f1_score
+            && this->mcc == other.mcc;
+    }
+
+    inline bool operator==(const double other) const
+    {
+        return this->true_pos == other
+            && this->true_neg == other
+            && this->false_pos == other
+            && this->false_neg == other
+            && this->accuracy == other
+            && this->precision == other
+            && this->recall == other
+            && this->f1_score == other
+            && this->mcc == other;
+    }
+
     inline Stats operator++()
     {
         this->true_pos++;
