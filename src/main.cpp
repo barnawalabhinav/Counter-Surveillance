@@ -85,7 +85,7 @@ inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int
 
     if (defaulters < d * n)
     {
-        std::cout << (float)defaulters / n << std::endl;
+        // std::cout << (float)defaulters / n << std::endl;
         return stats;
     }
     /****************************** Condition Check Finished ******************************/
@@ -150,7 +150,8 @@ inline std::pair<Stats, Stats> experiment(int n, int m, int k, int a, float p, f
         // Stats result = simulate(n, m, k, a, p, q, r, seed, b, d);
 
         Stats result;
-        while (result == 0)
+        int cnt = 0;
+        while (cnt++ < 100 && result == 0)
             result = simulate(n, m, k, a, p, q, r, seed, b, d);
 
         mean += result;
