@@ -7,7 +7,7 @@
 #include <omp.h>
 
 #include "helper.hpp"
-#include "plotter.hpp"
+#include "plotter-old.hpp"
 
 // Custom reduction declaration for OpenMP
 #pragma omp declare reduction(+ : Stats : omp_out += omp_in) initializer(omp_priv = Stats())
@@ -25,7 +25,7 @@
 * @param seed: Random Number Generator Seed
 * @param b: b for voting for absent student
 */
-inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 0.05, float d = 0.0, bool printVoteCount = false)
+inline std::pair<bool, Stats> simulate(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 0.05, float d = 0.0, bool printVoteCount = false)
 {
     std::bernoulli_distribution vote_present_dist(p);
     std::bernoulli_distribution vote_absent_dist(q);
@@ -83,11 +83,11 @@ inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int
         if (!present_status[i] && voters[i].size() >= k)
             defaulters++;
 
-    if (defaulters < d * n)
-    {
-        // std::cout << (float)defaulters / n << std::endl;
-        return stats;
-    }
+    // if (defaulters < d * n)
+    // {
+    //     // std::cout << (float)defaulters / n << std::endl;
+    //     return stats;
+    // }
     /****************************** Condition Check Finished ******************************/
 
     // Roll Call random students and check if they are present
@@ -136,12 +136,12 @@ inline Stats simulate(int n, int m, int k, int a, float p, float q, float r, int
 
         std::cout << std::fixed << std::setprecision(3) << "Number of Voters : " << mean_k_cnt << "\t\u00B1\t" << std_k_cnt << std::endl;
     }
-    return stats;
+    return {defaulters >= d * n, stats};
 }
 
 inline std::pair<Stats, Stats> experiment(int n, int m, int k, int a, float p, float q, float r, int seed = -1, int b = 0.05, float d = 0.0)
 {
-    // Stats res = simulate(n, m, k, a, p, q, r, seed, b, d, true);
+    // std::pair<bool, Stats> res = simulate(n, m, k, a, p, q, r, seed, b, d, true);
 
     Stats mean, std;
     int num_sim = 0;
@@ -150,9 +150,13 @@ inline std::pair<Stats, Stats> experiment(int n, int m, int k, int a, float p, f
         // Stats result = simulate(n, m, k, a, p, q, r, seed, b, d);
 
         Stats result;
+        bool fnd_enough_defaulters = false;
         int cnt = 0;
-        while (cnt++ < 100 && result == 0)
-            result = simulate(n, m, k, a, p, q, r, seed, b, d);
+        while (cnt++ < 100 && !fnd_enough_defaulters) {
+            std::pair<bool, Stats> local_res = simulate(n, m, k, a, p, q, r, seed, b, d);
+            fnd_enough_defaulters = local_res.first;
+            result = local_res.second;
+        }
 
         mean += result;
         std += result * result;
@@ -1393,6 +1397,9 @@ int main(int argc, char *argv[])
         stream.str("");
         stream << std::fixed << std::setprecision(2) << r;
         std::string r_str = stream.str();
+        stream.str("");
+        stream << std::fixed << std::setprecision(2) << d;
+        std::string d_str = stream.str();
         for (int j = 0; j < 5; j++)
         {
             plt.set_legend("bottom right");
@@ -1401,32 +1408,32 @@ int main(int argc, char *argv[])
             if (j == 0)
             {
                 plt.set_title("Model Performance when maximizing \"Accuracy\"");
-                plt.set_savePath(("plots_controlled/acc_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
-                fout = std::ofstream("plots_controlled/desc/accuracy_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
+                plt.set_savePath(("plots_controlled/acc_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".png").c_str());
+                fout = std::ofstream("plots_controlled/desc/accuracy_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".txt");
             }
             else if (j == 1)
             {
                 plt.set_title("Model Performance when maximizing \"Precision\"");
-                plt.set_savePath(("plots_controlled/prec_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
-                fout = std::ofstream("plots_controlled/desc/precision_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
+                plt.set_savePath(("plots_controlled/prec_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".png").c_str());
+                fout = std::ofstream("plots_controlled/desc/precision_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".txt");
             }
             else if (j == 2)
             {
                 plt.set_title("Model Performance when maximizing \"Recall\"");
-                plt.set_savePath(("plots_controlled/rec_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
-                fout = std::ofstream("plots_controlled/desc/recall_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
+                plt.set_savePath(("plots_controlled/rec_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".png").c_str());
+                fout = std::ofstream("plots_controlled/desc/recall_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".txt");
             }
             else if (j == 3)
             {
                 plt.set_title("Model Performance when maximizing \"F1-Score\"");
-                plt.set_savePath(("plots_controlled/f1_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
-                fout = std::ofstream("plots_controlled/desc/f1-score_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
+                plt.set_savePath(("plots_controlled/f1_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".png").c_str());
+                fout = std::ofstream("plots_controlled/desc/f1-score_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".txt");
             }
             else
             {
                 plt.set_title("Model Performance when maximizing \"MCC\"");
-                plt.set_savePath(("plots_controlled/mcc_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
-                fout = std::ofstream("plots_controlled/desc/mcc_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".txt");
+                plt.set_savePath(("plots_controlled/mcc_metric_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".png").c_str());
+                fout = std::ofstream("plots_controlled/desc/mcc_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".txt");
             }
 
             plt.createPlot(x, acc_mean[j], "Accuracy", "red", Plotter::CircleF, 1.0, 3.0);
@@ -1482,27 +1489,27 @@ int main(int argc, char *argv[])
             if (j == 0)
             {
                 plt.set_title("Best Control Variables when maximizing \"Accuracy\"");
-                plt.set_savePath(("plots_controlled/acc_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                plt.set_savePath(("plots_controlled/acc_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".png").c_str());
             }
             else if (j == 1)
             {
                 plt.set_title("Best Control Variables when maximizing \"Precision\"");
-                plt.set_savePath(("plots_controlled/prec_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                plt.set_savePath(("plots_controlled/prec_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".png").c_str());
             }
             else if (j == 2)
             {
                 plt.set_title("Best Control Variables when maximizing \"Recall\"");
-                plt.set_savePath(("plots_controlled/rec_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                plt.set_savePath(("plots_controlled/rec_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".png").c_str());
             }
             else if (j == 3)
             {
                 plt.set_title("Best Control Variables when maximizing \"F1-Score\"");
-                plt.set_savePath(("plots_controlled/f1_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                plt.set_savePath(("plots_controlled/f1_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".png").c_str());
             }
             else
             {
                 plt.set_title("Best Control Variables when maximizing \"MCC\"");
-                plt.set_savePath(("plots_controlled/mcc_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + ".png").c_str());
+                plt.set_savePath(("plots_controlled/mcc_control_p-" + p_str + "_q-" + q_str + "_r-" + r_str + "_d-" + d_str + ".png").c_str());
             }
 
             plt.createPlot(x, best_a[j], "a", "red", Plotter::CircleF, 1.0, 3.0);

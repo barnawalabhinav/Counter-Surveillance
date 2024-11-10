@@ -1,0 +1,65 @@
+===============================
+187096.pbshpc
+csky054.hpc.iitd.ac.in
+===============================
+/home/cse/dual/cs5200415/Counter-Surveillance
+########################## EXPERIMENT PARAMETERS ########################### 
+Mode of the program --------------------------------------------- mode: regress
+Number of Threads -------------------------------------------- threads: 40
+Seed (Random Number Generator) ---------------------------------- seed: -1
+Number of Simmulations ------------------------------------------- sim: 1000
+Number of Students in the Class ------------------------------------ n: 100
+Fraction of Students to pick for rollcall -------------------------- m: 0.1
+Minimum Number of Votes required to be present (as Fraction of n) -- k: 0.1
+Maximum Fraction of students that each student can ask for vote ---- a: 0.3
+Penalty for voting a absent student (as Fraction of n) ------------- b: 0.05
+Probability that a student is marked present if he/she is present -- p: 0.75
+Probability that a student is marked present if he/she is absent --- q: 0.25
+Probability that a student is present in the class ----------------- r: 0.3
+Minimum Fraction of Defaulters to ensure in each network ----------- d: 0.3
+---------------------------------------------------------------------------- 
+m varies as (0.0196906 * n) when optimizing for Accuracy
+m varies as (0.0197097 * n) when optimizing for Precision
+m varies as (0.0196906 * n) when optimizing for Recall
+m varies as (0.0196944 * n) when optimizing for F1-Score
+m varies as (0.0196906 * n) when optimizing for MCC
+k varies as (0.532722 * a) when optimizing for Accuracy
+k varies as (0.679563 * a) when optimizing for Precision
+k varies as (0.0950508 * a) when optimizing for Recall
+k varies as (0.52933 * a) when optimizing for F1-Score
+k varies as (0.532722 * a) when optimizing for MCC
+b varies as (0.116694 * a) when optimizing for Accuracy
+b varies as (0.210652 * a) when optimizing for Precision
+b varies as (0.0988579 * a) when optimizing for Recall
+b varies as (0.105766 * a) when optimizing for F1-Score
+b varies as (0.114433 * a) when optimizing for MCC
+########################## EXPERIMENT PARAMETERS ########################### 
+Mode of the program --------------------------------------------- mode: regress
+Number of Threads -------------------------------------------- threads: 40
+Seed (Random Number Generator) ---------------------------------- seed: -1
+Number of Simmulations ------------------------------------------- sim: 1000
+Number of Students in the Class ------------------------------------ n: 100
+Fraction of Students to pick for rollcall -------------------------- m: 0.1
+Minimum Number of Votes required to be present (as Fraction of n) -- k: 0.1
+Maximum Fraction of students that each student can ask for vote ---- a: 0.3
+Penalty for voting a absent student (as Fraction of n) ------------- b: 0.05
+Probability that a student is marked present if he/she is present -- p: 0.75
+Probability that a student is marked present if he/she is absent --- q: 0.25
+Probability that a student is present in the class ----------------- r: 0.7
+Minimum Fraction of Defaulters to ensure in each network ----------- d: 0.3
+---------------------------------------------------------------------------- 
+m varies as (0.0216053 * n) when optimizing for Accuracy
+m varies as (0.0196906 * n) when optimizing for Precision
+m varies as (0.0196906 * n) when optimizing for Recall
+m varies as (0.0216053 * n) when optimizing for F1-Score
+m varies as (0.0216053 * n) when optimizing for MCC
+k varies as (0.479839 * a) when optimizing for Accuracy
+k varies as (0.652807 * a) when optimizing for Precision
+k varies as (0.0952142 * a) when optimizing for Recall
+k varies as (0.479839 * a) when optimizing for F1-Score
+k varies as (0.479839 * a) when optimizing for MCC
+b varies as (0.118578 * a) when optimizing for Accuracy
+b varies as (0.128627 * a) when optimizing for Precision
+b varies as (0.0952142 * a) when optimizing for Recall
+b varies as (0.118578 * a) when optimizing for F1-Score
+b varies as (0.117448 * a) when optimizing for MCC
